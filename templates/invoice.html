@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container-fluid">
+
+  <!-- HEADER -->
+
+  <div class="text-center mb-4">
+    <h3 class="fw-bold mb-1">🧾 Create Invoice</h3>
+    <p class="text-muted">Generate and manage billing efficiently</p>
+  </div>
+
+  <form id="invoiceForm">
+
+```
+<!-- CUSTOMER -->
+<div class="card p-3 mb-3">
+  <h5 class="fw-bold mb-3">Customer Details</h5>
+
+  <div class="row g-3">
+
+    <div class="col-md-4">
+      <label class="form-label">Customer</label>
+      <select name="customer_id" id="customerSelect" class="form-select" required>
+        <option value="">-- Select Customer --</option>
+        {% for c in customers %}
+          <option value="{{ c[0] }}">{{ c[1] }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Bill Date</label>
+      <input type="date" name="invoice_date"
+             class="form-control"
+             value="{{ today_date }}"
+             max="{{ today_date }}" required>
+    </div>
+
+    {% if user_role == "admin" %}
+    <div class="col-md-2">
+      <label class="form-label">Prev Balance</label>
+      <input type="text" id="prevBalance" class="form-control text-end bg-light" readonly>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Credit Limit</label>
+      <input type="text" id="creditLimit" class="form-control text-end bg-light" readonly>
+    </div>
+
+    <div class="col-md-2">
+      <label class="form-label">Final Balance</label>
+      <input type="text" id="finalBalance" class="form-control text-end fw-bold bg-light" readonly>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- PRODUCTS -->
+<div class="card p-3 mb-3">
+
+  <div class="d-flex justify-content-between mb-3">
+    <h5 class="fw-bold">Products</h5>
+    <button type="button" class="btn btn-outline-secondary btn-sm" id="addRowBtn">
+      ➕ Add Product
+    </button>
+  </div>
+
+  <div id="itemsContainer">
+
+    <div class="card p-3 mb-2 item-row">
+      <div class="row g-3 align-items-end">
+
+        <div class="col-md-4">
+          <label class="form-label">Product</label>
+          <select name="product_id[]" class="form-select productSelect" required>
+            <option value="">-- Select Product --</option>
+            {% for p in products %}
+              <option value="{{ p[0] }}"
+                      data-price="{{ p[2] }}"
+                      data-stock="{{ p[3] }}"
+                      {% if p[3] == 0 %} disabled {% endif %}>
+                {{ p[1] }} (Stock: {{ p[3] }})
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Qty</label>
+          <input type="number" name="quantity[]" class="form-control qty text-center" value="1" min="1" required>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Rate</label>
+          <input type="number" step="0.01" name="rate[]" class="form-control rate text-end" required>
+        </div>
+
+        <div class="col-md-2">
+          <label class="form-label">Total</label>
+          <input type="text" class="form-control lineTotal text-end bg-light" readonly>
+        </div>
+
+        <div class="col-md-2">
+          <button type="button" class="btn btn-outline-danger w-100 removeRow">Remove</button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TOTAL -->
+<div class="card p-3">
+  <div class="row align-items-center">
+    <div class="col-md-9 text-end">
+      <h5 class="fw-bold mb-0">Grand Total</h5>
+    </div>
+    <div class="col-md-3">
+      <input type="text" id="grandTotal" class="form-control text-end fw-bold" readonly>
+    </div>
+  </div>
+
+  <button id="submitBtn" class="btn btn-primary w-100 mt-3 py-2">
+    Generate Invoice
+  </button>
+</div>
+```
+
+  </form>
+</div>
+
+<!-- ERROR MODAL -->
+
+<div class="modal fade" id="errorModal">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <h5 class="text-danger">❌ Error</h5>
+      <p id="errorText"></p>
+      <button class="btn btn-secondary mt-2" data-bs-dismiss="modal">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+function calculateTotals() {
+    let total = 0;
+    document.querySelectorAll(".item-row").forEach(row => {
+        let qty = parseFloat(row.querySelector(".qty").value) || 0;
+        let rate = parseFloat(row.querySelector(".rate").value) || 0;
+        let line = qty * rate;
+        row.querySelector(".lineTotal").value = line.toFixed(2);
+        total += line;
+    });
+
+    document.getElementById("grandTotal").value = total.toFixed(2);
+
+    let prev = parseFloat(document.getElementById("prevBalance")?.value) || 0;
+    if (document.getElementById("finalBalance")) {
+        document.getElementById("finalBalance").value = (prev + total).toFixed(2);
+    }
+}
+
+// Fetch customer balance
+document.getElementById("customerSelect").addEventListener("change", function () {
+    let id = this.value;
+    if (!id) return;
+
+    fetch(`/get-customer-balance/${id}`)
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("prevBalance").value = parseFloat(data.balance).toFixed(2);
+        document.getElementById("creditLimit").value = parseFloat(data.credit_limit).toFixed(2);
+        calculateTotals();
+    });
+});
+
+// Add row
+document.getElementById("addRowBtn").addEventListener("click", function () {
+    let row = document.querySelector(".item-row").cloneNode(true);
+
+    row.querySelector(".productSelect").selectedIndex = 0;
+    row.querySelector(".qty").value = 1;
+    row.querySelector(".rate").value = "";
+    row.querySelector(".lineTotal").value = "";
+
+    document.getElementById("itemsContainer").appendChild(row);
+});
+
+// Auto calculations
+document.addEventListener("input", function (e) {
+    if (e.target.classList.contains("qty") || e.target.classList.contains("rate")) {
+        calculateTotals();
+    }
+});
+
+// Set rate
+document.addEventListener("change", function (e) {
+    if (e.target.classList.contains("productSelect")) {
+        let selected = e.target.selectedOptions[0];
+        let price = parseFloat(selected.dataset.price || 0);
+        e.target.closest(".item-row").querySelector(".rate").value = price.toFixed(2);
+        calculateTotals();
+    }
+});
+
+// Remove row
+document.addEventListener("click", function (e) {
+    if (e.target.classList.contains("removeRow")) {
+        let rows = document.querySelectorAll(".item-row");
+        if (rows.length > 1) {
+            e.target.closest(".item-row").remove();
+            calculateTotals();
+        } else {
+            alert("At least one product required");
+        }
+    }
+});
+
+// FINAL SUBMIT LOGIC
+document.getElementById("invoiceForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    // Remove out of stock rows
+    document.querySelectorAll(".item-row").forEach(row => {
+        let stock = parseFloat(row.querySelector(".productSelect").selectedOptions[0]?.dataset.stock || 0);
+        if (stock === 0) {
+            alert("Out of stock product removed");
+            row.remove();
+        }
+    });
+
+    if (document.querySelectorAll(".item-row").length === 0) {
+        alert("No valid products!");
+        return;
+    }
+
+    // Adjust qty > stock
+  let proceed = true;
+
+document.querySelectorAll(".item-row").forEach(row => {
+    let product = row.querySelector(".productSelect");
+    let productName = product.selectedOptions[0]?.text || "Product";
+
+    let qty = parseFloat(row.querySelector(".qty").value) || 0;
+    let stock = parseFloat(product.selectedOptions[0]?.dataset.stock || 0);
+
+    if (qty > stock) {
+        let confirmMsg = `Only ${stock} items available for "${productName}".\n\nDo you want to proceed with ${stock}?`;
+
+        if (confirm(confirmMsg)) {
+            row.querySelector(".qty").value = stock; // adjust
+        } else {
+            proceed = false; // stop invoice
+        }
+    }
+});
+
+if (!proceed) {
+    return;
+}
+
+    submitInvoice();
+});
+
+function submitInvoice() {
+    let btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.innerText = "Processing...";
+
+    let formData = new FormData(document.getElementById("invoiceForm"));
+
+    fetch("/create-invoice", {method: "POST", body: formData})
+    .then(res => res.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerText = "Generate Invoice";
+
+        if (data.status === "error") {
+            document.getElementById("errorText").innerText = data.message;
+            new bootstrap.Modal(document.getElementById("errorModal")).show();
+        } else {
+            window.location.href = data.redirect;
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerText = "Generate Invoice";
+        alert("Something went wrong!");
+    });
+}
+
+calculateTotals();
+
+});
+</script>
+
+{% endblock %}

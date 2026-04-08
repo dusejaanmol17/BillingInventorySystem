@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container-fluid">
+
+  <!-- ===== HEADER ===== -->
+  <div class="text-center mb-4">
+    <h3 class="fw-bold mb-1">📊 Reports Dashboard</h3>
+    <p class="text-muted">Download and analyze your business reports</p>
+  </div>
+
+  <!-- ================= SALES ================= -->
+  <div class="card p-3 mb-3">
+    <h5 class="fw-bold mb-3">📈 Sales Reports</h5>
+
+    <div class="row g-3">
+
+      <!-- Date Range -->
+      <div class="col-md-6 col-12">
+        <div class="border rounded p-3 h-100">
+          <h6 class="fw-bold mb-2">📅 Date Range Sales</h6>
+
+          <form method="GET" action="/download-date-report">
+            <div class="row g-2">
+
+              <div class="col-6">
+                <input type="date" name="start_date" class="form-control form-control-sm" required>
+              </div>
+
+              <div class="col-6">
+                <input type="date" name="end_date" class="form-control form-control-sm" required>
+              </div>
+
+              <div class="col-12">
+                <button class="btn btn-dark w-100 py-2 mt-2">
+                  Download Report
+                </button>
+              </div>
+
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Customer Ledger -->
+      <div class="col-md-6 col-12">
+        <div class="border rounded p-3 h-100">
+          <h6 class="fw-bold mb-2">👤 Customer Ledger</h6>
+
+          <form method="GET" action="/download-customer-report">
+            <select name="customer_id" class="form-select form-select-sm mb-2" required>
+              <option value="">Select Customer</option>
+              {% for c in customers %}
+                <option value="{{ c[0] }}">{{ c[1] }}</option>
+              {% endfor %}
+            </select>
+
+            <button class="btn btn-primary w-100 py-2">
+              Download Report
+            </button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ================= INVENTORY ================= -->
+  <div class="card p-3 mb-3">
+    <h5 class="fw-bold mb-3">📦 Inventory Reports</h5>
+
+    <div class="row g-3">
+
+      <div class="col-md-6 col-lg-4 col-12">
+        <div class="border rounded p-3 text-center h-100">
+          <h6 class="fw-bold">📦 Product Sales</h6>
+          <a href="/download-product-sales-report"
+             class="btn btn-dark w-100 py-2 mt-2">
+            Download
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-4 col-12">
+        <div class="border rounded p-3 text-center h-100">
+          <h6 class="fw-bold">📥 Stock Inward</h6>
+          <a href="/download-stock-inward-report"
+             class="btn btn-success w-100 py-2 mt-2">
+            Download
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ================= PAYMENTS ================= -->
+  <div class="card p-3 mb-3">
+    <h5 class="fw-bold mb-3">💰 Payment Reports</h5>
+
+    <div class="row g-3">
+
+      <div class="col-md-6 col-lg-4 col-12">
+        <div class="border rounded p-3 text-center h-100">
+          <h6 class="fw-bold">📊 Summary</h6>
+          <a href="/download-payment-summary"
+             class="btn btn-success w-100 py-2 mt-2">
+            Download
+          </a>
+        </div>
+      </div>
+
+      <div class="col-md-6 col-lg-4 col-12">
+        <div class="border rounded p-3 text-center h-100">
+          <h6 class="fw-bold">🧾 Detailed</h6>
+          <a href="/download-payments-report"
+             class="btn btn-info w-100 py-2 mt-2">
+            Download
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+
+  <!-- ================= RETURNS ================= -->
+  <div class="card p-3 mb-3">
+    <h5 class="fw-bold mb-3">🔄 Return Reports</h5>
+
+    <div class="row g-3">
+
+      <div class="col-md-6 col-lg-4 col-12">
+        <div class="border rounded p-3 text-center h-100">
+          <h6 class="fw-bold">📦 Returns Report</h6>
+          <a href="/download-returns-report"
+             class="btn btn-danger w-100 py-2 mt-2">
+            Download
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+{% endblock %}

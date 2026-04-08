@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container-fluid">
+
+  <!-- ===== HEADER ===== -->
+
+  <div class="text-center mb-4">
+    <h3 class="fw-bold mb-1">👤 Customers</h3>
+    <p class="text-muted mb-3">Manage your customer records</p>
+
+
+<button class="btn btn-success px-4"
+        data-bs-toggle="modal"
+        data-bs-target="#customerModal">
+  ➕ Add Customer
+</button>
+
+
+  </div>
+
+  <!-- ===== TABLE CARD ===== -->
+
+  <div class="card p-3">
+
+
+<div class="table-responsive">
+  <table class="table align-middle mb-0">
+
+    <thead class="text-center text-muted">
+      <tr>
+        <th class="text-start">Name</th>
+        <th>Phone</th>
+        <th>Address</th>
+        <th>Credit Limit</th>
+        <th>Balance</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      {% for c in customers %}
+      <tr>
+
+        <!-- Name -->
+        <td class="fw-semibold">{{ c[1] }}</td>
+
+        <!-- Phone -->
+        <td class="text-center">{{ c[2] or '-' }}</td>
+
+        <!-- Address -->
+        <td>{{ c[3] or '-' }}</td>
+
+        <!-- Credit Limit -->
+        <td class="text-center">₹ {{ c[4] }}</td>
+
+        <!-- Balance -->
+        <td class="text-center">
+          {% if c[5] < 5000 %}
+            <span class="badge rounded-pill bg-success px-3 py-2">
+              ₹ {{ c[5] }}
+            </span>
+          {% else %}
+            <span class="badge rounded-pill bg-danger px-3 py-2">
+              ₹ {{ c[5] }}
+            </span>
+          {% endif %}
+        </td>
+
+      </tr>
+      {% endfor %}
+    </tbody>
+
+  </table>
+</div>
+
+
+  </div>
+
+</div>
+
+<!-- ===================== -->
+
+<!-- ✅ ADD CUSTOMER MODAL -->
+
+<!-- ===================== -->
+
+<div class="modal fade" id="customerModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content p-3">
+
+
+  <form method="POST" action="/add-customer">
+
+    <div class="modal-header border-0">
+      <h5 class="modal-title fw-bold">➕ Add Customer</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="mb-3">
+        <label class="form-label">Customer Name</label>
+        <input type="text" name="name" class="form-control" required>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Phone Number</label>
+        <input type="text" name="phone" class="form-control">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Address</label>
+        <input type="text" name="address" class="form-control">
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label">Credit Limit</label>
+        <input type="number" step="0.01" name="credit_limit" class="form-control" required>
+      </div>
+
+    </div>
+
+    <div class="modal-footer border-0">
+      <button class="btn btn-success w-100">
+        Save Customer
+      </button>
+    </div>
+
+  </form>
+
+</div>
+
+
+  </div>
+</div>
+
+{% endblock %}

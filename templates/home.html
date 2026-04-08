@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="container-fluid pb-5">
+
+    <!-- Header -->
+    <div class="text-center mb-4">
+        <h2 class="fw-bold">🎵 Music World Dashboard</h2>
+        <p class="text-muted">Manage your inventory, billing & reports efficiently</p>
+    </div>
+
+    <!-- KPI Cards -->
+    <div class="row g-4 mb-4">
+
+        <div class="col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <i class="fa-solid fa-box fa-2x text-primary mb-2"></i>
+                <h6>Total Products</h6>
+                <h3>{{ total_products }}</h3>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <i class="fa-solid fa-users fa-2x text-success mb-2"></i>
+                <h6>Total Customers</h6>
+                <h3>{{ total_customers }}</h3>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <i class="fa-solid fa-file-invoice fa-2x text-warning mb-2"></i>
+                <h6>Total Invoices</h6>
+                <h3>{{ total_invoices }}</h3>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card dashboard-card text-center p-3">
+                <i class="fa-solid fa-indian-rupee-sign fa-2x text-danger mb-2"></i>
+                <h6>Today's Revenue</h6>
+                <h3>₹ {{ today_revenue }}</h3>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Action Cards -->
+    <div class="row g-4">
+
+        <div class="col-md-4">
+            <a href="/products" class="text-decoration-none">
+                <div class="card action-card text-center p-4">
+                    <i class="fa-solid fa-box-open fa-2x text-primary mb-2"></i>
+                    <h6>Manage Products</h6>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4">
+            <a href="/customers" class="text-decoration-none">
+                <div class="card action-card text-center p-4">
+                    <i class="fa-solid fa-user fa-2x text-success mb-2"></i>
+                    <h6>Customers</h6>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4">
+            <a href="/invoice" class="text-decoration-none">
+                <div class="card action-card text-center p-4">
+                    <i class="fa-solid fa-file-invoice-dollar fa-2x text-warning mb-2"></i>
+                    <h6>Billing</h6>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4">
+            <a href="/returns" class="text-decoration-none">
+                <div class="card action-card text-center p-4">
+                    <i class="fa-solid fa-rotate-left fa-2x text-danger mb-2"></i>
+                    <h6>Returns</h6>
+                </div>
+            </a>
+        </div>
+
+        {% if session.get('user') == 'admin' %}
+
+        <div class="col-md-4">
+            <a href="/payments" class="text-decoration-none">
+                <div class="card action-card text-center p-4">
+                    <i class="fa-solid fa-money-bill-wave fa-2x text-success mb-2"></i>
+                    <h6>Payments</h6>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4">
+            <a href="/reports" class="text-decoration-none">
+                <div class="card action-card text-center p-4">
+                    <i class="fa-solid fa-chart-line fa-2x text-primary mb-2"></i>
+                    <h6>Reports</h6>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-md-4">
+            <a href="/alerts" class="text-decoration-none">
+                <div class="card action-card text-center p-4">
+                    <i class="fa-solid fa-bell fa-2x text-warning mb-2"></i>
+                    <h6>Alerts</h6>
+                </div>
+            </a>
+        </div>
+
+        <!-- BACKUP CARD -->
+        <div class="col-md-4">
+            <div class="card action-card text-center p-4"
+                 data-bs-toggle="modal"
+                 data-bs-target="#backupModal"
+                 style="cursor:pointer;">
+                <i class="fa-solid fa-database fa-2x text-secondary mb-2"></i>
+                <h6>Backup</h6>
+            </div>
+        </div>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+<!-- Backup Modal -->
+<div class="modal fade" id="backupModal" tabindex="-1" aria-labelledby="backupModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="backupModalLabel">Backup Options</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <p>Select Backup Frequency:</p>
+        <a href="/backup/daily" class="btn btn-primary m-2">Daily Backup</a>
+        <a href="/backup/weekly" class="btn btn-primary m-2">Weekly Backup</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

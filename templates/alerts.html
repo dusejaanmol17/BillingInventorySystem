@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container-fluid mt-4">
+
+  <div class="text-center mb-4">
+    <h3 class="fw-bold mb-1">💰 Payment Alerts</h3>
+    <p class="text-muted">Notify customers of pending payments</p>
+  </div>
+
+  <div class="row g-3">
+
+    {% for c in customers|sort(attribute=1) %}
+    <div class="col-md-4">
+      <div class="card shadow-sm border-0 h-100">
+
+        <div class="card-body d-flex flex-column justify-content-between">
+
+          <div>
+            <h5 class="fw-bold">{{ c[1] }}</h5>
+            <p class="fw-bold fs-5 mb-2
+               {% if c[3] > 5000 %}text-danger{% else %}text-primary{% endif %}">
+              Pending: ₹ {{ "%.2f"|format(c[3]) }}
+            </p>
+          </div>
+
+          <!-- BUTTONS -->
+          <div class="d-grid gap-2">
+
+            <!-- VIEW MONTHLY LEDGER -->
+            <a href="/monthly-ledger/{{ c[0] }}" target="_blank"
+               class="btn btn-info">
+              📊 Monthly Ledger
+            </a>
+
+            <!-- WHATSAPP -->
+    <a target="_blank"
+   href="https://wa.me/91{{ c[2] }}?text=Hello%20{{ c[1] }},%0A%0AYour%20pending%20amount%20is%20₹{{ "%.2f"|format(c[3]) }}.%0A%0APlease%20clear%20the%20dues%20at%20the%20earliest.%0A%0AThank%20you🙏"
+   class="btn btn-success">
+  📱 Send WhatsApp
+</a>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+    {% endfor %}
+
+  </div>
+
+</div>
+
+{% endblock %}

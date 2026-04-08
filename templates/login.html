@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="d-flex justify-content-center align-items-center" style="min-height:75vh;">
+
+    <div class="card p-4" style="width:100%; max-width:400px; border-radius:14px; box-shadow: 0 6px 18px rgba(0,0,0,0.05); transition:0.25s;">
+        
+        <!-- Title -->
+        <div class="text-center mb-4">
+            <h2 class="fw-bold">🔐 Login</h2>
+            <p class="text-muted">Access your dashboard securely</p>
+        </div>
+
+        <!-- FLASH MESSAGE (if any) -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="alert alert-{{ 'success' if category=='success' else 'danger' }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <!-- FORM -->
+        <form method="POST" action="/login">
+
+            <!-- Username -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Username</label>
+                <input type="text" name="username" class="form-control" placeholder="Enter username" required>
+            </div>
+
+            <!-- Password -->
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Password</label>
+                <input type="password" name="password" class="form-control" placeholder="Enter password" required>
+            </div>
+
+            <!-- Login Button -->
+            <div class="d-grid mt-3">
+                <button type="submit" class="btn btn-primary">
+                    Login
+                </button>
+            </div>
+
+        </form>
+
+        <!-- Extra Info -->
+        <div class="text-center mt-3">
+            <small class="text-muted">Only authorized users allowed</small>
+        </div>
+
+    </div>
+
+</div>
+
+{% endblock %}
