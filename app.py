@@ -1451,8 +1451,8 @@ scheduler = BackgroundScheduler()
 def start_scheduler():
     if not scheduler.get_jobs():
         try:
-            scheduler.add_job(send_daily_report, 'interval', minutes=1)
-            #scheduler.add_job(send_daily_report, trigger='cron', hour=23, minute=0)
+            #scheduler.add_job(send_daily_report, 'interval', minutes=1)
+            scheduler.add_job(send_daily_report, trigger='cron', hour=23, minute=0)
             scheduler.add_job(send_weekly_backup, trigger='cron', day_of_week='sun', hour=23, minute=0)
 
             scheduler.start()
