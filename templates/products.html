@@ -9,65 +9,71 @@
     <h3 class="fw-bold mb-1">📦 Products</h3>
     <p class="text-muted mb-3">Manage your product inventory</p>
 
+    <button class="btn btn-success px-4"
+            data-bs-toggle="modal"
+            data-bs-target="#stockModal">
+      ➕ Add Stock
+    </button>
 
-<button class="btn btn-success px-4"
-        data-bs-toggle="modal"
-        data-bs-target="#stockModal">
-  ➕ Add Stock
-</button>
+  </div>
 
-
+  <!-- ===== SEARCH (NEW - NO UI CHANGE) ===== -->
+  <div class="d-flex justify-content-center mb-3">
+    <input type="text"
+           id="productSearch"
+           class="form-control"
+           style="max-width: 400px;"
+           placeholder="🔍 Search product...">
   </div>
 
   <!-- ===== TABLE CARD ===== -->
 
   <div class="card p-3">
 
-<div class="table-responsive">
-  <table class="table align-middle mb-0">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0" id="productTable">
 
-    <thead class="text-center text-muted">
-      <tr>
-        <th class="text-start">Product</th>
-        <th>Price</th>
-        <th>Stock</th>
-      </tr>
-    </thead>
+        <thead class="text-center text-muted">
+          <tr>
+            <th class="text-start">Product</th>
+            <th>Price</th>
+            <th>Stock</th>
+          </tr>
+        </thead>
 
-    <tbody>
-      {% for p in products %}
-      <tr>
+        <tbody>
+          {% for p in products %}
+          <tr>
 
-        <!-- Product Name -->
-        <td class="fw-semibold">{{ p[1] }}</td>
+            <!-- Product Name -->
+            <td class="fw-semibold">{{ p[1] }}</td>
 
-        <!-- Price -->
-        <td class="text-center">₹ {{ p[2] }}</td>
+            <!-- Price -->
+            <td class="text-center">₹ {{ p[2] }}</td>
 
-        <!-- Stock -->
-        <td class="text-center">
-          {% if p[3] < 10 %}
-            <span class="badge rounded-pill bg-danger px-3 py-2">
-              {{ p[3] }} ⚠️
-            </span>
-          {% elif p[3] < 20 %}
-            <span class="badge rounded-pill bg-warning text-dark px-3 py-2">
-              {{ p[3] }}
-            </span>
-          {% else %}
-            <span class="badge rounded-pill bg-success px-3 py-2">
-              {{ p[3] }}
-            </span>
-          {% endif %}
-        </td>
+            <!-- Stock -->
+            <td class="text-center">
+              {% if p[3] < 10 %}
+                <span class="badge rounded-pill bg-danger px-3 py-2">
+                  {{ p[3] }} ⚠️
+                </span>
+              {% elif p[3] < 20 %}
+                <span class="badge rounded-pill bg-warning text-dark px-3 py-2">
+                  {{ p[3] }}
+                </span>
+              {% else %}
+                <span class="badge rounded-pill bg-success px-3 py-2">
+                  {{ p[3] }}
+                </span>
+              {% endif %}
+            </td>
 
-      </tr>
-      {% endfor %}
-    </tbody>
+          </tr>
+          {% endfor %}
+        </tbody>
 
-  </table>
-</div>
-
+      </table>
+    </div>
 
   </div>
 
@@ -79,84 +85,81 @@
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content p-3">
 
-```
-  <form method="POST" action="/add-stock">
+      <form method="POST" action="/add-stock">
 
-    <div class="modal-header border-0">
-      <h5 class="modal-title fw-bold">➕ Add Stock</h5>
-      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold">➕ Add Stock</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <!-- PRODUCT -->
+          <div class="mb-3">
+            <label class="form-label">Product</label>
+            <select id="productDropdown" class="form-select">
+              <option value="">-- Select Product --</option>
+
+              {% for p in products %}
+              <option value="{{p[0]}}" data-price="{{p[2]}}">
+                {{p[1]}}
+              </option>
+              {% endfor %}
+
+              <option value="NEW">➕ Add New Product</option>
+            </select>
+          </div>
+
+          <!-- hidden product_id -->
+          <input type="hidden" name="product_id" id="productId">
+
+          <!-- NEW PRODUCT -->
+          <div id="newProductDiv" class="mb-3 d-none">
+            <input type="text"
+                   name="new_product_name"
+                   id="newProductInput"
+                   class="form-control"
+                   placeholder="Enter new product name">
+          </div>
+
+          <!-- PRICE -->
+          <div class="mb-3">
+            <label class="form-label">Price</label>
+            <input type="number" step="0.01"
+                   name="price"
+                   id="priceInput"
+                   class="form-control" required>
+          </div>
+
+          <!-- QTY -->
+          <div class="mb-3">
+            <label class="form-label">Quantity</label>
+            <input type="number"
+                   name="quantity"
+                   class="form-control"
+                   required>
+          </div>
+
+          <!-- DATE -->
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date"
+                   name="received_date"
+                   class="form-control"
+                   required>
+          </div>
+
+        </div>
+
+        <div class="modal-footer border-0">
+          <button class="btn btn-success w-100">
+            Save Stock
+          </button>
+        </div>
+
+      </form>
+
     </div>
-
-    <div class="modal-body">
-
-      <!-- PRODUCT -->
-      <div class="mb-3">
-        <label class="form-label">Product</label>
-        <select id="productDropdown" class="form-select">
-          <option value="">-- Select Product --</option>
-
-          {% for p in products %}
-          <option value="{{p[0]}}" data-price="{{p[2]}}">
-            {{p[1]}}
-          </option>
-          {% endfor %}
-
-          <option value="NEW">➕ Add New Product</option>
-        </select>
-      </div>
-
-      <!-- hidden product_id -->
-      <input type="hidden" name="product_id" id="productId">
-
-      <!-- NEW PRODUCT -->
-      <div id="newProductDiv" class="mb-3 d-none">
-        <input type="text"
-               name="new_product_name"
-               id="newProductInput"
-               class="form-control"
-               placeholder="Enter new product name">
-      </div>
-
-      <!-- PRICE -->
-      <div class="mb-3">
-        <label class="form-label">Price</label>
-        <input type="number" step="0.01"
-               name="price"
-               id="priceInput"
-               class="form-control" required>
-      </div>
-
-      <!-- QTY -->
-      <div class="mb-3">
-        <label class="form-label">Quantity</label>
-        <input type="number"
-               name="quantity"
-               class="form-control"
-               required>
-      </div>
-
-      <!-- DATE -->
-      <div class="mb-3">
-        <label class="form-label">Date</label>
-        <input type="date"
-               name="received_date"
-               class="form-control"
-               required>
-      </div>
-
-    </div>
-
-    <div class="modal-footer border-0">
-      <button class="btn btn-success w-100">
-        Save Stock
-      </button>
-    </div>
-
-  </form>
-
-</div>
-```
-
   </div>
 </div>
 
@@ -185,6 +188,23 @@ dropdown.addEventListener("change", function () {
       priceInput.value = parseFloat(selected.dataset.price).toFixed(2);
     }
   }
+});
+
+/* ================= LIVE SEARCH FILTER (NEW) ================= */
+
+document.getElementById("productSearch").addEventListener("keyup", function () {
+  let value = this.value.toLowerCase();
+  let rows = document.querySelectorAll("#productTable tbody tr");
+
+  rows.forEach(row => {
+    let productName = row.children[0].innerText.toLowerCase();
+
+    if (productName.includes(value)) {
+      row.style.display = "";
+    } else {
+      row.style.display = "none";
+    }
+  });
 });
 </script>
 

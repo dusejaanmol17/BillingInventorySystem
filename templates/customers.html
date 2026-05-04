@@ -4,134 +4,207 @@
 <div class="container-fluid">
 
   <!-- ===== HEADER ===== -->
-
-  <div class="text-center mb-4">
+  <div class="text-center mb-3">
     <h3 class="fw-bold mb-1">👤 Customers</h3>
     <p class="text-muted mb-3">Manage your customer records</p>
 
+    <div class="d-flex justify-content-center gap-2 flex-wrap">
 
-<button class="btn btn-success px-4"
-        data-bs-toggle="modal"
-        data-bs-target="#customerModal">
-  ➕ Add Customer
-</button>
+      <!-- SEARCH (NO RELOAD) -->
+      <input type="text"
+             id="customerSearch"
+             class="form-control w-25"
+             placeholder="🔍 Search customer...">
 
+      <!-- ADD BUTTON -->
+      <button class="btn btn-success px-4"
+              data-bs-toggle="modal"
+              data-bs-target="#customerModal">
+        ➕ Add Customer
+      </button>
 
+    </div>
   </div>
 
-  <!-- ===== TABLE CARD ===== -->
-
+  <!-- ===== TABLE ===== -->
   <div class="card p-3">
 
+    <div class="table-responsive">
+      <table class="table align-middle mb-0" id="customerTable">
 
-<div class="table-responsive">
-  <table class="table align-middle mb-0">
+        <thead class="text-center text-muted">
+          <tr>
+            <th class="text-start">Name</th>
+            <th>Phone</th>
+            <th>Address</th>
+            <th>Credit Limit</th>
+            <th>Opening Balance</th>
+            <th>Opening Date</th>
+            <th>Balance</th>
+            <th>Action</th>
+          </tr>
+        </thead>
 
-    <thead class="text-center text-muted">
-      <tr>
-        <th class="text-start">Name</th>
-        <th>Phone</th>
-        <th>Address</th>
-        <th>Credit Limit</th>
-        <th>Balance</th>
-      </tr>
-    </thead>
+        <tbody>
+          {% for c in customers %}
+          <tr>
 
-    <tbody>
-      {% for c in customers %}
-      <tr>
+            <!-- Name -->
+            <td class="fw-semibold customer-name">{{ c[1] }}</td>
 
-        <!-- Name -->
-        <td class="fw-semibold">{{ c[1] }}</td>
+            <!-- Phone -->
+            <td class="text-center customer-phone">{{ c[2] or '-' }}</td>
 
-        <!-- Phone -->
-        <td class="text-center">{{ c[2] or '-' }}</td>
+            <!-- Address -->
+            <td class="customer-address">{{ c[3] or '-' }}</td>
 
-        <!-- Address -->
-        <td>{{ c[3] or '-' }}</td>
+            <!-- Credit Limit -->
+            <td class="text-center">₹ {{ c[4] }}</td>
 
-        <!-- Credit Limit -->
-        <td class="text-center">₹ {{ c[4] }}</td>
+            <!-- Opening Balance -->
+            <td class="text-center">₹ {{ c[6] or 0 }}</td>
 
-        <!-- Balance -->
-        <td class="text-center">
-          {% if c[5] < 5000 %}
-            <span class="badge rounded-pill bg-success px-3 py-2">
-              ₹ {{ c[5] }}
-            </span>
-          {% else %}
-            <span class="badge rounded-pill bg-danger px-3 py-2">
-              ₹ {{ c[5] }}
-            </span>
-          {% endif %}
-        </td>
+            <!-- Opening Date -->
+            <td class="text-center">{{ c[7] or '-' }}</td>
 
-      </tr>
-      {% endfor %}
-    </tbody>
+            <!-- Balance -->
+            <td class="text-center">
+              {% if c[5] < 5000 %}
+                <span class="badge bg-success px-3 py-2">₹ {{ c[5] }}</span>
+              {% else %}
+                <span class="badge bg-danger px-3 py-2">₹ {{ c[5] }}</span>
+              {% endif %}
+            </td>
 
-  </table>
-</div>
+            <!-- ACTION -->
+            <td class="text-center">
 
+              <button class="btn btn-sm btn-primary"
+                      data-bs-toggle="modal"
+                      data-bs-target="#editCustomerModal"
+                      onclick="fillEditForm(
+                        '{{ c[0] }}',
+                        '{{ c[1] }}',
+                        '{{ c[2] }}',
+                        '{{ c[3] }}',
+                        '{{ c[4] }}',
+                        '{{ c[6] }}',
+                        '{{ c[7] }}'
+                      )">
+                ✏️ Edit
+              </button>
+
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+
+      </table>
+    </div>
 
   </div>
-
 </div>
 
-<!-- ===================== -->
-
-<!-- ✅ ADD CUSTOMER MODAL -->
-
-<!-- ===================== -->
-
+<!-- ================= ADD CUSTOMER MODAL ================= -->
 <div class="modal fade" id="customerModal" tabindex="-1">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content p-3">
 
+      <form method="POST" action="/add-customer">
 
-  <form method="POST" action="/add-customer">
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold">➕ Add Customer</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
 
-    <div class="modal-header border-0">
-      <h5 class="modal-title fw-bold">➕ Add Customer</h5>
-      <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-    </div>
+        <div class="modal-body">
 
-    <div class="modal-body">
+          <input type="text" name="name" class="form-control mb-2" placeholder="Name" required>
+          <input type="text" name="phone" class="form-control mb-2" placeholder="Phone">
+          <input type="text" name="address" class="form-control mb-2" placeholder="Address">
+          <input type="number" step="0.01" name="credit_limit" class="form-control mb-2" placeholder="Credit Limit" required>
 
-      <div class="mb-3">
-        <label class="form-label">Customer Name</label>
-        <input type="text" name="name" class="form-control" required>
-      </div>
+        </div>
 
-      <div class="mb-3">
-        <label class="form-label">Phone Number</label>
-        <input type="text" name="phone" class="form-control">
-      </div>
+        <div class="modal-footer border-0">
+          <button class="btn btn-success w-100">Save Customer</button>
+        </div>
 
-      <div class="mb-3">
-        <label class="form-label">Address</label>
-        <input type="text" name="address" class="form-control">
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Credit Limit</label>
-        <input type="number" step="0.01" name="credit_limit" class="form-control" required>
-      </div>
+      </form>
 
     </div>
-
-    <div class="modal-footer border-0">
-      <button class="btn btn-success w-100">
-        Save Customer
-      </button>
-    </div>
-
-  </form>
-
-</div>
-
-
   </div>
 </div>
+
+<!-- ================= EDIT CUSTOMER MODAL ================= -->
+<div class="modal fade" id="editCustomerModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content p-3">
+
+      <form method="POST" action="/update-customer">
+
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold">✏️ Edit Customer</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <input type="hidden" name="customer_id" id="edit_customer_id">
+
+          <input type="text" name="name" id="edit_name" class="form-control mb-2">
+          <input type="text" name="phone" id="edit_phone" class="form-control mb-2">
+          <input type="text" name="address" id="edit_address" class="form-control mb-2">
+          <input type="number" step="0.01" name="credit_limit" id="edit_credit" class="form-control mb-2">
+          <input type="number" step="0.01" name="opening_balance" id="edit_opening_balance" class="form-control mb-2">
+          <input type="date" name="opening_balance_date" id="edit_opening_date" class="form-control mb-2">
+
+        </div>
+
+        <div class="modal-footer border-0">
+          <button class="btn btn-primary w-100">Update Customer</button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+</div>
+
+<!-- ================= JS ================= -->
+
+<script>
+
+// ===== SEARCH FILTER (NO RELOAD) =====
+document.getElementById("customerSearch").addEventListener("keyup", function () {
+  let value = this.value.toLowerCase();
+  let rows = document.querySelectorAll("#customerTable tbody tr");
+
+  rows.forEach(row => {
+    let name = row.querySelector(".customer-name").innerText.toLowerCase();
+    let phone = row.querySelector(".customer-phone").innerText.toLowerCase();
+    let address = row.querySelector(".customer-address").innerText.toLowerCase();
+
+    if (name.includes(value) || phone.includes(value) || address.includes(value)) {
+      row.style.display = "";
+    } else {
+      row.style.display = "none";
+    }
+  });
+});
+
+// ===== FILL EDIT FORM =====
+function fillEditForm(id, name, phone, address, credit, opening_balance, opening_date) {
+  document.getElementById("edit_customer_id").value = id;
+  document.getElementById("edit_name").value = name;
+  document.getElementById("edit_phone").value = phone;
+  document.getElementById("edit_address").value = address;
+  document.getElementById("edit_credit").value = credit;
+  document.getElementById("edit_opening_balance").value = opening_balance;
+  document.getElementById("edit_opening_date").value = opening_date;
+}
+
+</script>
 
 {% endblock %}
