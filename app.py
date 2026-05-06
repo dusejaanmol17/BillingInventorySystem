@@ -17,10 +17,10 @@ from datetime import date,timedelta
 import smtplib
 from flask import jsonify,flash,session
 from email.message import EmailMessage
-from apscheduler.schedulers.background import BackgroundScheduler
 import os
 from dotenv import load_dotenv
-
+from apscheduler.schedulers.background import BackgroundScheduler
+scheduler = BackgroundScheduler()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
@@ -1797,23 +1797,23 @@ def add_stock():
 
 
 def start_scheduler():
-    if not scheduler.get_jobs():
-        try:
-            #scheduler.add_job(send_daily_report, 'interval', minutes=1)
+    try:
+        if not scheduler.running:
             scheduler.add_job(send_daily_report, trigger='cron', hour=23, minute=0)
             scheduler.add_job(send_weekly_backup, trigger='cron', day_of_week='sun', hour=23, minute=0)
 
             scheduler.start()
             print(f"✅ Scheduler started on {socket.gethostname()}")
 
-        except Exception as e:
-            print("Scheduler error:", e)
+    except Exception as e:
+        print("Scheduler error:", e)
 
 
 import atexit
 
 # ✅ Start scheduler automatically in production
-start_scheduler()
+if os.environ.get("RENDER") == "true":
+    start_scheduler()
 
 # ✅ Graceful shutdown
-atexit.register(lambda: scheduler.shutdown())
+atexit.register(lambda: scheduler.shutdown() if scheduler.running else None)
