@@ -1132,54 +1132,92 @@ def download_returns_report():
 # ----------------------------------------
 @app.route("/download-customer-report")
 def download_customer_report():
+    try:
+        print("🔥 ENTERED CUSTOMER REPORT API")
+
+        if "user" not in session:
+            print("❌ No session")
+            return redirect("/login")
+
+        if session.get("user") != "admin":
+            print("❌ Not admin")
+            return redirect("/")
+
+        customer_id = request.args.get("customer_id")
+        print("📌 customer_id:", customer_id)
+
+        # your existing code...
+
+        print("📊 final_data / ledger:", final_data if 'final_data' in locals() else "NOT DEFINED")
+
+    except Exception as e:
+        print("❌ ERROR IN CUSTOMER REPORT:", str(e))
+        return str(e)
+
+
+# ----------------------------------------
+# 🧾 DETAILED PAYMENTS REPORT
+# ----------------------------------------
+@app.route("/download-payments-report")
+def download_payments_report():
     if "user" not in session:
         return redirect("/login")
+
     if session.get("user") != "admin":
         flash("Access denied!", "danger")
         return redirect("/")
 
-    customer_id = request.args.get("customer_id")
-
     conn = get_connection()
     cur = conn.cursor()
 
-    cur.execute("""
-        SELECT name, COALESCE(opening_balance,0)
-        FROM customers
-        WHERE customer_id=%s
-    """, (customer_id,))
-    
-    customer = cur.fetchone()
-    if not customer:
-        return "Customer not found"
+    try:
+        cur.execute("""
+            SELECT 
+                p.payment_id,
+                p.payment_date::date,
+                c.name AS customer,
+                p.amount,
+                p.payment_mode,
+                COALESCE(p.reference_no,''),
+                COALESCE(p.remarks,'')
+            FROM payments p
+            JOIN customers c ON p.customer_id = c.customer_id
+            ORDER BY p.payment_date DESC
+        """)
 
-    customer_name = customer[0]
-    opening_balance = float(customer[1] or 0)
+        data = cur.fetchall()
 
-    ledger = []
+        if not data:
+            return "No payment records found."
 
-    # (ALL YOUR EXISTING LOGIC UNCHANGED HERE)
+        df = pd.DataFrame(data, columns=[
+            "Payment ID",
+            "Date",
+            "Customer",
+            "Amount",
+            "Mode",
+            "Reference No",
+            "Remarks"
+        ])
 
-    # ... SAME ledger building logic ...
+        output = BytesIO()
+        df.to_excel(output, index=False)
+        output.seek(0)
 
-    cur.close()
-    conn.close()
+        return send_file(
+            output,
+            as_attachment=True,
+            download_name="detailed_payments_report.xlsx",
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
 
-    df = pd.DataFrame(final_data, columns=[
-        "Date","Type","Reference","Product","Qty",
-        "Purchase","Payment/Return","Balance"
-    ])
+    except Exception as e:
+        print("❌ PAYMENT REPORT ERROR:", str(e))
+        return str(e)
 
-    output = BytesIO()
-    df.to_excel(output, index=False)
-    output.seek(0)
-
-    return send_file(
-        output,
-        as_attachment=True,
-        download_name=f"{customer_name}_Ledger.xlsx"
-    )
-
+    finally:
+        cur.close()
+        conn.close()
 
 # ----------------------------------------
 # 📦 PRODUCT SALES REPORT
