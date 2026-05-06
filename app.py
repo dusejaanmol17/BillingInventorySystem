@@ -1130,33 +1130,99 @@ def download_returns_report():
 # ----------------------------------------
 # 📒 CUSTOMER LEDGER
 # ----------------------------------------
+
+
 @app.route("/download-customer-report")
 def download_customer_report():
-    try:
-        print("🔥 ENTERED CUSTOMER REPORT API")
+    if "user" not in session:
+        return redirect("/login")
 
-        if "user" not in session:
-            print("❌ No session")
-            return redirect("/login")
+    if session.get("user") != "admin":
+        flash("Access denied!", "danger")
+        return redirect("/")
 
-        if session.get("user") != "admin":
-            print("❌ Not admin")
-            return redirect("/")
+    customer_id = request.args.get("customer_id")
 
-        customer_id = request.args.get("customer_id")
-        print("📌 customer_id:", customer_id)
+    conn = get_connection()
+    cur = conn.cursor()
 
-        # your existing code...
+    # Get customer
+    cur.execute("SELECT name FROM customers WHERE customer_id=%s", (customer_id,))
+    customer = cur.fetchone()
 
-        if 'final_data' in locals():
-            print("📊 final_data / ledger:", final_data)
-        else:
-            print("📊 final_data / ledger: NOT DEFINED")
+    if not customer:
+        cur.close()
+        conn.close()
+        return "Customer not found"
 
-    except Exception as e:
-        print("❌ ERROR IN CUSTOMER REPORT:", str(e))
-        return str(e), 500
+    customer_name = customer[0]
 
+    ledger = []
+
+    # Invoices
+    cur.execute("""
+        SELECT i.invoice_date, i.invoice_number, p.name, ii.quantity, ii.line_total
+        FROM invoices i
+        JOIN invoice_items ii ON i.invoice_id = ii.invoice_id
+        JOIN products p ON ii.product_id = p.product_id
+        WHERE i.customer_id = %s
+    """, (customer_id,))
+    
+    for row in cur.fetchall():
+        ledger.append([row[0], "Invoice", row[1], row[2], row[3], row[4], 0])
+
+    # Payments
+    cur.execute("SELECT payment_date, amount FROM payments WHERE customer_id=%s", (customer_id,))
+    
+    for row in cur.fetchall():
+        ledger.append([row[0], "Payment", "Payment", "", "", 0, row[1]])
+
+    # Returns
+    cur.execute("""
+        SELECT r.return_date, r.return_number, p.name, ri.quantity, ri.line_total
+        FROM returns r
+        JOIN return_items ri ON r.return_id = ri.return_id
+        JOIN products p ON ri.product_id = p.product_id
+        WHERE r.customer_id = %s
+    """, (customer_id,))
+    
+    for row in cur.fetchall():
+        ledger.append([row[0], "Return", row[1], row[2], row[3], 0, row[4]])
+
+    cur.close()
+    conn.close()
+
+    # Sort
+    ledger = sorted(ledger, key=lambda x: x[0])
+
+    # Running balance
+    running_balance = 0
+    final_data = []
+
+    for entry in ledger:
+        running_balance += entry[5]
+        running_balance -= entry[6]
+        final_data.append(entry + [running_balance])
+
+    # DataFrame
+    df = pd.DataFrame(final_data, columns=[
+        "Date", "Type", "Reference", "Product", "Qty",
+        "Purchase", "Payment/Return", "Balance"
+    ])
+
+    # ✅ Create Excel in memory (IMPORTANT FIX)
+    output = io.BytesIO()
+    df.to_excel(output, index=False)
+    output.seek(0)
+
+    filename = f"{customer_name}_Ledger.xlsx"
+
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    )
 # ----------------------------------------
 # 🧾 DETAILED PAYMENTS REPORT
 # ----------------------------------------
