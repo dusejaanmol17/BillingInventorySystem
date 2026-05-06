@@ -3,254 +3,206 @@
 
 <div class="container-fluid">
 
+  <!-- HEADER -->
   <div class="text-center mb-4">
-    <h3 class="fw-bold mb-1">🧾 Create Invoice</h3>
-    <p class="text-muted">Generate and manage billing efficiently</p>
-  </div>
+    <h3 class="fw-bold mb-1">📦 Products</h3>
+    <p class="text-muted mb-3">Manage your product inventory</p>
 
-  <form id="invoiceForm">
-
-<!-- CUSTOMER -->
-<div class="card p-3 mb-3">
-  <h5 class="fw-bold mb-3">Customer Details</h5>
-
-  <div class="row g-3">
-
-    <div class="col-md-4">
-      <label class="form-label">Customer</label>
-      <select name="customer_id" id="customerSelect" class="form-select" required>
-        <option value="">-- Select Customer --</option>
-        {% for c in customers %}
-          <option value="{{ c[0] }}">{{ c[1] }}</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div class="col-md-2">
-      <label class="form-label">Bill Date</label>
-      <input type="date" name="invoice_date"
-             class="form-control"
-             value="{{ today_date }}"
-             max="{{ today_date }}" required>
-    </div>
-
-  </div>
-</div>
-
-<!-- PRODUCTS -->
-<div class="card p-3 mb-3">
-
-  <div class="d-flex justify-content-between mb-2">
-    <h5 class="fw-bold">Products</h5>
-    <button type="button" class="btn btn-outline-secondary btn-sm" id="addRowBtn">
-      ➕ Add Product
+    <button class="btn btn-success px-4"
+            data-bs-toggle="modal"
+            data-bs-target="#stockModal">
+      ➕ Add Stock
     </button>
   </div>
 
-  <!-- 🔍 SEARCH BOX -->
-  <input type="text" id="productSearch" class="form-control mb-3"
-         placeholder="🔍 Search product...">
+  <!-- TABLE -->
+  <div class="card p-3">
+    <div class="table-responsive">
+      <table class="table align-middle mb-0" id="productTable">
 
-  <div id="itemsContainer">
+        <thead class="text-center text-muted">
+          <tr>
+            <th class="text-start">Product</th>
+            <th>Price</th>
+            <th>Stock</th>
+          </tr>
+        </thead>
 
-    <div class="card p-3 mb-2 item-row">
-      <div class="row g-3 align-items-end">
+        <tbody>
+          {% for p in products %}
+          <tr>
+            <td class="fw-semibold">{{ p[1] }}</td>
+            <td class="text-center">₹ {{ p[2] }}</td>
 
-        <div class="col-md-4">
-          <label class="form-label">Product</label>
+            <td class="text-center">
+              {% if p[3] < 10 %}
+                <span class="badge bg-danger">{{ p[3] }}</span>
+              {% elif p[3] < 20 %}
+                <span class="badge bg-warning text-dark">{{ p[3] }}</span>
+              {% else %}
+                <span class="badge bg-success">{{ p[3] }}</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
 
-          <select name="product_id[]" class="form-select productSelect" required>
-            <option value="">-- Select Product --</option>
-
-            {% for p in products %}
-              <option value="{{ p[0] }}"
-                      data-price="{{ p[2] }}"
-                      data-stock="{{ p[3] }}"
-                      {% if p[3] == 0 %} disabled {% endif %}>
-                {{ p[1] }} (Stock: {{ p[3] }})
-              </option>
-            {% endfor %}
-          </select>
-
-        </div>
-
-        <div class="col-md-2">
-          <label class="form-label">Qty</label>
-          <input type="number" name="quantity[]" class="form-control qty text-center" value="1" min="1">
-        </div>
-
-        <div class="col-md-2">
-          <label class="form-label">Rate</label>
-          <input type="number" step="0.01" name="rate[]" class="form-control rate text-end">
-        </div>
-
-        <div class="col-md-2">
-          <label class="form-label">Total</label>
-          <input type="text" class="form-control lineTotal text-end bg-light" readonly>
-        </div>
-
-        <div class="col-md-2">
-          <button type="button" class="btn btn-outline-danger w-100 removeRow">Remove</button>
-        </div>
-
-      </div>
-    </div>
-
-  </div>
-</div>
-
-<!-- TOTAL -->
-<div class="card p-3">
-  <div class="row align-items-center">
-    <div class="col-md-9 text-end">
-      <h5 class="fw-bold mb-0">Grand Total</h5>
-    </div>
-    <div class="col-md-3">
-      <input type="text" id="grandTotal" class="form-control text-end fw-bold" readonly>
+      </table>
     </div>
   </div>
 
-  <button id="submitBtn" class="btn btn-primary w-100 mt-3 py-2">
-    Generate Invoice
-  </button>
 </div>
 
-  </form>
-</div>
+<!-- ================= MODAL ================= -->
 
-<!-- ERROR MODAL -->
-<div class="modal fade" id="errorModal">
-  <div class="modal-dialog">
+<div class="modal fade" id="stockModal">
+  <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content p-3">
-      <h5 class="text-danger">❌ Error</h5>
-      <p id="errorText"></p>
-      <button class="btn btn-secondary mt-2" data-bs-dismiss="modal">Close</button>
+
+      <form method="POST" action="/add-stock">
+
+        <div class="modal-header border-0">
+          <h5 class="modal-title fw-bold">➕ Add Stock</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+
+        <div class="modal-body">
+
+          <!-- PRODUCT SELECT (ENHANCED SEARCH INSIDE SAME SELECT) -->
+          <div class="mb-3">
+            <label class="form-label">Product</label>
+            <select id="productDropdown" class="form-select">
+              <option value="">-- Select Product --</option>
+
+              {% for p in products %}
+              <option value="{{p[0]}}"
+                      data-price="{{p[2]}}"
+                      data-stock="{{p[3]}}">
+                {{p[1]}}
+              </option>
+              {% endfor %}
+
+              <option value="NEW">➕ Add New Product</option>
+            </select>
+          </div>
+
+          <input type="hidden" name="product_id" id="productId">
+
+          <div id="newProductDiv" class="mb-3 d-none">
+            <input type="text" name="new_product_name"
+                   class="form-control"
+                   placeholder="Enter new product name">
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Price</label>
+            <input type="number" step="0.01"
+                   name="price"
+                   id="priceInput"
+                   class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Quantity</label>
+            <input type="number" name="quantity" class="form-control" required>
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label">Date</label>
+            <input type="date" name="received_date" class="form-control" required>
+          </div>
+
+        </div>
+
+        <div class="modal-footer border-0">
+          <button class="btn btn-success w-100">Save Stock</button>
+        </div>
+
+      </form>
+
     </div>
   </div>
 </div>
 
-<!-- STYLES -->
+<!-- ================= STYLES ================= -->
 <style>
-select option:disabled {
+option:disabled {
   color: #999;
   background: #f3f3f3;
 }
 </style>
 
-<!-- SCRIPT -->
+<!-- ================= JS ================= -->
 <script>
-document.addEventListener("DOMContentLoaded", function () {
 
-function calculateTotals() {
-    let total = 0;
+const dropdown = document.getElementById("productDropdown");
+const priceInput = document.getElementById("priceInput");
+const productIdInput = document.getElementById("productId");
+const newDiv = document.getElementById("newProductDiv");
 
-    document.querySelectorAll(".item-row").forEach(row => {
-        let qty = parseFloat(row.querySelector(".qty").value) || 0;
-        let rate = parseFloat(row.querySelector(".rate").value) || 0;
-        let line = qty * rate;
+// ================= PRODUCT SELECT LOGIC =================
+dropdown.addEventListener("change", function () {
 
-        row.querySelector(".lineTotal").value = line.toFixed(2);
-        total += line;
+  const selected = this.options[this.selectedIndex];
+
+  if (this.value === "NEW") {
+    newDiv.classList.remove("d-none");
+    productIdInput.value = "";
+    priceInput.value = "";
+  } else {
+    newDiv.classList.add("d-none");
+
+    productIdInput.value = this.value;
+
+    if (selected.dataset.price) {
+      priceInput.value = parseFloat(selected.dataset.price).toFixed(2);
+    }
+  }
+});
+
+
+// ================= INLINE SEARCH INSIDE SELECT =================
+// Type-to-filter WITHOUT extra input box
+
+let allOptions = Array.from(dropdown.options);
+
+dropdown.addEventListener("keydown", function (e) {
+
+  let key = e.key.toLowerCase();
+
+  // ignore control keys
+  if (key.length > 1 && key !== "backspace") return;
+
+  setTimeout(() => {
+
+    let search = dropdown.dataset.search || "";
+
+    if (key === "backspace") {
+      search = search.slice(0, -1);
+    } else {
+      search += key;
+    }
+
+    dropdown.dataset.search = search;
+
+    let filtered = allOptions.filter(opt => {
+      if (!opt.value || opt.value === "NEW") return true;
+
+      return opt.text.toLowerCase().includes(search);
     });
 
-    document.getElementById("grandTotal").value = total.toFixed(2);
-}
+    // sort A-Z always
+    filtered.sort((a, b) => a.text.localeCompare(b.text));
 
-// ================= SEARCH FILTER (A-Z maintained from backend) =================
-document.getElementById("productSearch").addEventListener("input", function () {
-    let filter = this.value.toLowerCase();
+    dropdown.innerHTML = "";
 
-    document.querySelectorAll(".productSelect option").forEach(opt => {
-        if (!opt.value) return;
-
-        let text = opt.textContent.toLowerCase();
-
-        opt.style.display = text.includes(filter) ? "" : "none";
+    filtered.forEach(opt => {
+      dropdown.appendChild(opt);
     });
+
+  }, 0);
 });
 
-// ================= ADD ROW =================
-document.getElementById("addRowBtn").addEventListener("click", function () {
-    let row = document.querySelector(".item-row").cloneNode(true);
-
-    row.querySelector(".productSelect").selectedIndex = 0;
-    row.querySelector(".qty").value = 1;
-    row.querySelector(".rate").value = "";
-    row.querySelector(".lineTotal").value = "";
-
-    document.getElementById("itemsContainer").appendChild(row);
-});
-
-// ================= AUTO CALC =================
-document.addEventListener("input", function (e) {
-    if (e.target.classList.contains("qty") || e.target.classList.contains("rate")) {
-        calculateTotals();
-    }
-});
-
-// ================= SET RATE =================
-document.addEventListener("change", function (e) {
-    if (e.target.classList.contains("productSelect")) {
-        let opt = e.target.selectedOptions[0];
-        let price = parseFloat(opt.dataset.price || 0);
-
-        e.target.closest(".item-row").querySelector(".rate").value = price.toFixed(2);
-
-        calculateTotals();
-    }
-});
-
-// ================= REMOVE ROW =================
-document.addEventListener("click", function (e) {
-    if (e.target.classList.contains("removeRow")) {
-        let rows = document.querySelectorAll(".item-row");
-
-        if (rows.length > 1) {
-            e.target.closest(".item-row").remove();
-            calculateTotals();
-        } else {
-            alert("At least one product required");
-        }
-    }
-});
-
-// ================= SUBMIT =================
-document.getElementById("invoiceForm").addEventListener("submit", function(e) {
-    e.preventDefault();
-
-    submitInvoice();
-});
-
-function submitInvoice() {
-    let btn = document.getElementById("submitBtn");
-    btn.disabled = true;
-    btn.innerText = "Processing...";
-
-    let formData = new FormData(document.getElementById("invoiceForm"));
-
-    fetch("/create-invoice", {method: "POST", body: formData})
-    .then(res => res.json())
-    .then(data => {
-        btn.disabled = false;
-        btn.innerText = "Generate Invoice";
-
-        if (data.status === "error") {
-            document.getElementById("errorText").innerText = data.message;
-            new bootstrap.Modal(document.getElementById("errorModal")).show();
-        } else {
-            window.location.href = data.redirect;
-        }
-    })
-    .catch(() => {
-        btn.disabled = false;
-        btn.innerText = "Generate Invoice";
-        alert("Something went wrong!");
-    });
-}
-
-calculateTotals();
-
-});
 </script>
 
 {% endblock %}
