@@ -1146,8 +1146,8 @@ def download_customer_report():
     conn = get_connection()
     cur = conn.cursor()
 
-    # Get customer
-    cur.execute("SELECT name FROM customers WHERE customer_id=%s", (customer_id,))
+    # Get customer (WITH opening balance)
+    cur.execute("SELECT name, opening_balance FROM customers WHERE customer_id=%s", (customer_id,))
     customer = cur.fetchone()
 
     if not customer:
@@ -1156,8 +1156,20 @@ def download_customer_report():
         return "Customer not found"
 
     customer_name = customer[0]
+    opening_balance = customer[1] if customer[1] else 0
 
     ledger = []
+
+    # ✅ Opening Balance entry added
+    ledger.append([
+        None,
+        "Opening Balance",
+        "",
+        "",
+        "",
+        opening_balance if opening_balance > 0 else 0,
+        abs(opening_balance) if opening_balance < 0 else 0
+    ])
 
     # Invoices
     cur.execute("""
@@ -1192,8 +1204,8 @@ def download_customer_report():
     cur.close()
     conn.close()
 
-    # Sort
-    ledger = sorted(ledger, key=lambda x: x[0])
+    # Sort (handle None date for opening balance)
+    ledger = sorted(ledger, key=lambda x: (x[0] is not None, x[0]))
 
     # Running balance
     running_balance = 0
@@ -1210,7 +1222,7 @@ def download_customer_report():
         "Purchase", "Payment/Return", "Balance"
     ])
 
-    # ✅ Create Excel in memory (IMPORTANT FIX)
+    # Excel in memory
     output = io.BytesIO()
     df.to_excel(output, index=False)
     output.seek(0)
