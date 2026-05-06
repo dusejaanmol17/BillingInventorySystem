@@ -1148,12 +1148,14 @@ def download_customer_report():
 
         # your existing code...
 
-        print("📊 final_data / ledger:", final_data if 'final_data' in locals() else "NOT DEFINED")
+        if 'final_data' in locals():
+            print("📊 final_data / ledger:", final_data)
+        else:
+            print("📊 final_data / ledger: NOT DEFINED")
 
     except Exception as e:
         print("❌ ERROR IN CUSTOMER REPORT:", str(e))
-        return str(e)
-
+        return str(e), 500
 
 # ----------------------------------------
 # 🧾 DETAILED PAYMENTS REPORT
