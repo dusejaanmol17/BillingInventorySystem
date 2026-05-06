@@ -509,20 +509,31 @@ def invoice_page():
 
 @app.route("/create-invoice", methods=["POST"])
 def create_invoice():
+    print("🔥 ENTERED create_invoice API")
+
     if "user" not in session:
+        print("❌ User not in session")
         return redirect("/login")
 
-    customer_id = request.form["customer_id"]
-    invoice_date = request.form["invoice_date"]
+    customer_id = request.form.get("customer_id")
+    invoice_date = request.form.get("invoice_date")
+
+    print("📌 customer_id:", customer_id)
+    print("📌 invoice_date:", invoice_date)
 
     product_ids = request.form.getlist("product_id[]")
     quantities = request.form.getlist("quantity[]")
     rates = request.form.getlist("rate[]")
 
+    print("📦 product_ids:", product_ids)
+    print("📦 quantities:", quantities)
+    print("📦 rates:", rates)
+
     conn = get_connection()
     cur = None
 
     try:
+        print("🔌 DB connection established")
         cur = conn.cursor()
 
         total_amount = 0
@@ -531,27 +542,39 @@ def create_invoice():
 
         # ================= STOCK CHECK =================
         for i in range(len(product_ids)):
+            print(f"➡️ Processing item {i}")
+
             pid = product_ids[i]
             qty = float(quantities[i]) if quantities[i] else 0
             rate = float(rates[i]) if rates[i] else 0
 
+            print(f"   pid={pid}, qty={qty}, rate={rate}")
+
             cur.execute("SELECT stock_qty, name FROM products WHERE product_id=%s", (pid,))
             product = cur.fetchone()
 
+            print("   DB product fetch:", product)
+
             if not product:
+                print("   ⚠️ Product not found, skipping")
                 continue
 
             stock_qty, product_name = product
 
             if stock_qty == 0:
-                stock_warnings.append(f"{product_name} is OUT OF STOCK and skipped")
+                msg = f"{product_name} is OUT OF STOCK and skipped"
+                print("   ⚠️", msg)
+                stock_warnings.append(msg)
                 continue
 
             if qty > stock_qty:
-                stock_warnings.append(f"{product_name}: adjusted from {qty} to {stock_qty}")
+                msg = f"{product_name}: adjusted from {qty} to {stock_qty}"
+                print("   ⚠️", msg)
+                stock_warnings.append(msg)
                 qty = stock_qty
 
             if qty <= 0:
+                print("   ⚠️ Quantity <= 0, skipping")
                 continue
 
             line_total = qty * rate
@@ -564,26 +587,39 @@ def create_invoice():
                 "line_total": line_total
             })
 
+        print("🧾 valid_items:", valid_items)
+        print("💰 total_amount:", total_amount)
+
         # ❌ No valid items → stop
         if len(valid_items) == 0:
+            print("❌ No valid items found")
             return jsonify({
                 "status": "error",
                 "message": "All selected products are out of stock!"
             })
 
         # ================= CREDIT CHECK =================
+        print("🔍 Checking credit limit")
+
         cur.execute("""
             SELECT credit_limit
             FROM customers
             WHERE customer_id = %s
         """, (customer_id,))
 
-        credit_limit = float(cur.fetchone()[0] or 0)
+        result = cur.fetchone()
+        print("📊 credit_limit fetch:", result)
+
+        credit_limit = float(result[0] or 0)
 
         current_balance = calculate_customer_balance(customer_id, conn)
+        print("📊 current_balance:", current_balance)
+
         new_balance = current_balance + total_amount
+        print("📊 new_balance:", new_balance)
 
         if new_balance > credit_limit:
+            print("❌ Credit limit exceeded")
             return jsonify({
                 "status": "error",
                 "message": "Credit limit exceeded",
@@ -593,6 +629,8 @@ def create_invoice():
             })
 
         # ================= INSERT INVOICE =================
+        print("📝 Inserting invoice")
+
         cur.execute("""
             INSERT INTO invoices (customer_id, invoice_date, total_amount)
             VALUES (%s,%s,%s)
@@ -600,8 +638,10 @@ def create_invoice():
         """, (customer_id, invoice_date, total_amount))
 
         invoice_id = cur.fetchone()[0]
+        print("✅ invoice_id:", invoice_id)
 
         invoice_number = f"MW-{invoice_id:04d}"
+        print("🧾 invoice_number:", invoice_number)
 
         cur.execute("""
             UPDATE invoices
@@ -610,7 +650,11 @@ def create_invoice():
         """, (invoice_number, invoice_id))
 
         # ================= INSERT ITEMS =================
+        print("📦 Inserting invoice items")
+
         for item in valid_items:
+            print("   ➕ Adding item:", item)
+
             cur.execute("""
                 INSERT INTO invoice_items (invoice_id, product_id, quantity, rate, line_total)
                 VALUES (%s,%s,%s,%s,%s)
@@ -623,8 +667,9 @@ def create_invoice():
             """, (item["qty"], item["pid"]))
 
         conn.commit()
+        print("✅ Transaction committed")
 
-        # ✅ SUCCESS RESPONSE (ONLY HERE)
+        # ✅ SUCCESS RESPONSE
         response = {
             "status": "success",
             "redirect": f"/invoice/{invoice_id}"
@@ -634,25 +679,28 @@ def create_invoice():
             response["message"] = "Some items were adjusted or skipped"
             response["stock_warnings"] = stock_warnings
 
+        print("🎉 Invoice created successfully")
         return jsonify(response)
 
     except Exception as e:
         conn.rollback()
-        print("CREATE INVOICE ERROR:", e)
+        print("❌ CREATE INVOICE ERROR:", str(e))
 
         return jsonify({
             "status": "error",
-            "message": "Something went wrong while creating invoice"
+            "message": str(e)   # 👈 IMPORTANT: return actual error
         })
 
     finally:
+        print("🔚 Closing DB connection")
         try:
             if cur:
                 cur.close()
-        except:
-            pass
-        conn.close()
+        except Exception as e:
+            print("Error closing cursor:", e)
 
+        conn.close()
+        
 @app.route("/invoice/<int:invoice_id>")
 def view_invoice(invoice_id):
     if "user" not in session:
