@@ -25,7 +25,7 @@ scheduler = BackgroundScheduler()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 load_dotenv(os.path.join(BASE_DIR, ".env"))
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY")
+app.secret_key = os.getenv("SECRET_KEY", "fallback_secret_key")
 
 
 SHOP_DETAILS = {
