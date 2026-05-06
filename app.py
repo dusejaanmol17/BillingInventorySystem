@@ -23,7 +23,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 scheduler = BackgroundScheduler()
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-#load_dotenv(os.path.join(BASE_DIR, ".env"))
+load_dotenv(os.path.join(BASE_DIR, ".env"))
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY")
 print("SECRET KEY:", os.getenv("SECRET_KEY"))
@@ -307,14 +307,28 @@ def add_customer():
     address = request.form.get("address", "").strip()
     credit_limit = request.form.get("credit_limit", 0)
 
+    # ✅ NEW FIELDS
+    opening_balance = request.form.get("opening_balance", 0)
+    opening_balance_date = request.form.get("opening_balance_date")
+
     if not name:
         flash("❌ Customer name is required", "danger")
         return redirect("/customers")
 
+    # ✅ SAFE CONVERSIONS
     try:
         credit_limit = float(credit_limit)
     except:
         credit_limit = 0
+
+    try:
+        opening_balance = float(opening_balance)
+    except:
+        opening_balance = 0
+
+    # ✅ Handle empty date → NULL
+    if not opening_balance_date:
+        opening_balance_date = None
 
     conn = get_connection()
     cur = None
@@ -322,7 +336,7 @@ def add_customer():
     try:
         cur = conn.cursor()
 
-        # ✅ DUPLICATE CHECK (NEW ADDITION)
+        # ✅ DUPLICATE CHECK (UNCHANGED)
         cur.execute("""
             SELECT customer_id 
             FROM customers 
@@ -335,11 +349,25 @@ def add_customer():
             flash("⚠️ Customer already exists (same name or phone)", "danger")
             return redirect("/customers")
 
-        # ORIGINAL INSERT (UNCHANGED)
+        # ✅ UPDATED INSERT (ONLY CHANGE)
         cur.execute("""
-            INSERT INTO customers (name, phone, address, credit_limit)
-            VALUES (%s, %s, %s, %s)
-        """, (name, phone, address, credit_limit))
+            INSERT INTO customers (
+                name,
+                phone,
+                address,
+                credit_limit,
+                opening_balance,
+                opening_balance_date
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (
+            name,
+            phone,
+            address,
+            credit_limit,
+            opening_balance,
+            opening_balance_date
+        ))
 
         conn.commit()
         flash("✅ Customer added successfully!", "success")
