@@ -628,26 +628,24 @@ def create_invoice():
                 "credit_limit": credit_limit
             })
 
-        # ================= INSERT INVOICE =================
-        print("📝 Inserting invoice")
+        # ================= INSERT INVOICE (FIXED) =================
+        print("📝 Generating invoice_id and invoice_number")
 
-        cur.execute("""
-            INSERT INTO invoices (customer_id, invoice_date, total_amount)
-            VALUES (%s,%s,%s)
-            RETURNING invoice_id
-        """, (customer_id, invoice_date, total_amount))
-
+        # ✅ Get next sequence value BEFORE insert
+        cur.execute("SELECT nextval('invoices_invoice_id_seq')")
         invoice_id = cur.fetchone()[0]
-        print("✅ invoice_id:", invoice_id)
 
         invoice_number = f"MW-{invoice_id:04d}"
+
+        print("✅ invoice_id:", invoice_id)
         print("🧾 invoice_number:", invoice_number)
 
+        print("📝 Inserting invoice with invoice_number")
+
         cur.execute("""
-            UPDATE invoices
-            SET invoice_number = %s
-            WHERE invoice_id = %s
-        """, (invoice_number, invoice_id))
+            INSERT INTO invoices (invoice_id, customer_id, invoice_date, total_amount, invoice_number)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (invoice_id, customer_id, invoice_date, total_amount, invoice_number))
 
         # ================= INSERT ITEMS =================
         print("📦 Inserting invoice items")
@@ -688,7 +686,7 @@ def create_invoice():
 
         return jsonify({
             "status": "error",
-            "message": str(e)   # 👈 IMPORTANT: return actual error
+            "message": str(e)
         })
 
     finally:
@@ -700,7 +698,7 @@ def create_invoice():
             print("Error closing cursor:", e)
 
         conn.close()
-        
+
 @app.route("/invoice/<int:invoice_id>")
 def view_invoice(invoice_id):
     if "user" not in session:
