@@ -1,4 +1,18 @@
-{% extends "base.html" %} {% block content %} <div class="container-fluid"> <!-- HEADER --> <div class="text-center mb-4"> <h3 class="fw-bold mb-1">🧾 Create Invoice</h3> <p class="text-muted">Generate and manage billing efficiently</p> </div> <form id="invoiceForm">
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container-fluid">
+
+  <!-- HEADER -->
+
+  <div class="text-center mb-4">
+    <h3 class="fw-bold mb-1">🧾 Create Invoice</h3>
+    <p class="text-muted">Generate and manage billing efficiently</p>
+  </div>
+
+  <form id="invoiceForm">
+
+```
 <!-- CUSTOMER -->
 <div class="card p-3 mb-3">
   <h5 class="fw-bold mb-3">Customer Details</h5>
@@ -113,4 +127,176 @@
     Generate Invoice
   </button>
 </div>
-</form> </div> <!-- ERROR MODAL --> <div class="modal fade" id="errorModal"> <div class="modal-dialog"> <div class="modal-content p-3"> <h5 class="text-danger">❌ Error</h5> <p id="errorText"></p> <button class="btn btn-secondary mt-2" data-bs-dismiss="modal">Close</button> </div> </div> </div> <script> document.addEventListener("DOMContentLoaded", function () { function calculateTotals() { let total = 0; document.querySelectorAll(".item-row").forEach(row => { let qty = parseFloat(row.querySelector(".qty").value) || 0; let rate = parseFloat(row.querySelector(".rate").value) || 0; let line = qty * rate; row.querySelector(".lineTotal").value = line.toFixed(2); total += line; }); document.getElementById("grandTotal").value = total.toFixed(2); let prev = parseFloat(document.getElementById("prevBalance")?.value) || 0; if (document.getElementById("finalBalance")) { document.getElementById("finalBalance").value = (prev + total).toFixed(2); } } // Fetch customer balance document.getElementById("customerSelect").addEventListener("change", function () { let id = this.value; if (!id) return; fetch(/get-customer-balance/${id}) .then(res => res.json()) .then(data => { document.getElementById("prevBalance").value = parseFloat(data.balance).toFixed(2); document.getElementById("creditLimit").value = parseFloat(data.credit_limit).toFixed(2); calculateTotals(); }); }); // Add row document.getElementById("addRowBtn").addEventListener("click", function () { let row = document.querySelector(".item-row").cloneNode(true); row.querySelector(".productSelect").selectedIndex = 0; row.querySelector(".qty").value = 1; row.querySelector(".rate").value = ""; row.querySelector(".lineTotal").value = ""; document.getElementById("itemsContainer").appendChild(row); }); // Auto calculations document.addEventListener("input", function (e) { if (e.target.classList.contains("qty") || e.target.classList.contains("rate")) { calculateTotals(); } }); // Set rate document.addEventListener("change", function (e) { if (e.target.classList.contains("productSelect")) { let selected = e.target.selectedOptions[0]; let price = parseFloat(selected.dataset.price || 0); e.target.closest(".item-row").querySelector(".rate").value = price.toFixed(2); calculateTotals(); } }); // Remove row document.addEventListener("click", function (e) { if (e.target.classList.contains("removeRow")) { let rows = document.querySelectorAll(".item-row"); if (rows.length > 1) { e.target.closest(".item-row").remove(); calculateTotals(); } else { alert("At least one product required"); } } }); // FINAL SUBMIT LOGIC document.getElementById("invoiceForm").addEventListener("submit", function(e) { e.preventDefault(); // Remove out of stock rows document.querySelectorAll(".item-row").forEach(row => { let stock = parseFloat(row.querySelector(".productSelect").selectedOptions[0]?.dataset.stock || 0); if (stock === 0) { alert("Out of stock product removed"); row.remove(); } }); if (document.querySelectorAll(".item-row").length === 0) { alert("No valid products!"); return; } // Adjust qty > stock let proceed = true; document.querySelectorAll(".item-row").forEach(row => { let product = row.querySelector(".productSelect"); let productName = product.selectedOptions[0]?.text || "Product"; let qty = parseFloat(row.querySelector(".qty").value) || 0; let stock = parseFloat(product.selectedOptions[0]?.dataset.stock || 0); if (qty > stock) { let confirmMsg = Only ${stock} items available for "${productName}".\n\nDo you want to proceed with ${stock}?; if (confirm(confirmMsg)) { row.querySelector(".qty").value = stock; // adjust } else { proceed = false; // stop invoice } } }); if (!proceed) { return; } submitInvoice(); }); function submitInvoice() { let btn = document.getElementById("submitBtn"); btn.disabled = true; btn.innerText = "Processing..."; let formData = new FormData(document.getElementById("invoiceForm")); fetch("/create-invoice", {method: "POST", body: formData}) .then(res => res.json()) .then(data => { btn.disabled = false; btn.innerText = "Generate Invoice"; if (data.status === "error") { document.getElementById("errorText").innerText = data.message; new bootstrap.Modal(document.getElementById("errorModal")).show(); } else { window.location.href = data.redirect; } }) .catch(() => { btn.disabled = false; btn.innerText = "Generate Invoice"; alert("Something went wrong!"); }); } calculateTotals(); }); </script> {% endblock %}
+```
+
+  </form>
+</div>
+
+<!-- ERROR MODAL -->
+
+<div class="modal fade" id="errorModal">
+  <div class="modal-dialog">
+    <div class="modal-content p-3">
+      <h5 class="text-danger">❌ Error</h5>
+      <p id="errorText"></p>
+      <button class="btn btn-secondary mt-2" data-bs-dismiss="modal">Close</button>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+
+function calculateTotals() {
+    let total = 0;
+    document.querySelectorAll(".item-row").forEach(row => {
+        let qty = parseFloat(row.querySelector(".qty").value) || 0;
+        let rate = parseFloat(row.querySelector(".rate").value) || 0;
+        let line = qty * rate;
+        row.querySelector(".lineTotal").value = line.toFixed(2);
+        total += line;
+    });
+
+    document.getElementById("grandTotal").value = total.toFixed(2);
+
+    let prev = parseFloat(document.getElementById("prevBalance")?.value) || 0;
+    if (document.getElementById("finalBalance")) {
+        document.getElementById("finalBalance").value = (prev + total).toFixed(2);
+    }
+}
+
+// Fetch customer balance
+document.getElementById("customerSelect").addEventListener("change", function () {
+    let id = this.value;
+    if (!id) return;
+
+    fetch(`/get-customer-balance/${id}`)
+    .then(res => res.json())
+    .then(data => {
+        document.getElementById("prevBalance").value = parseFloat(data.balance).toFixed(2);
+        document.getElementById("creditLimit").value = parseFloat(data.credit_limit).toFixed(2);
+        calculateTotals();
+    });
+});
+
+// Add row
+document.getElementById("addRowBtn").addEventListener("click", function () {
+    let row = document.querySelector(".item-row").cloneNode(true);
+
+    row.querySelector(".productSelect").selectedIndex = 0;
+    row.querySelector(".qty").value = 1;
+    row.querySelector(".rate").value = "";
+    row.querySelector(".lineTotal").value = "";
+
+    document.getElementById("itemsContainer").appendChild(row);
+});
+
+// Auto calculations
+document.addEventListener("input", function (e) {
+    if (e.target.classList.contains("qty") || e.target.classList.contains("rate")) {
+        calculateTotals();
+    }
+});
+
+// Set rate
+document.addEventListener("change", function (e) {
+    if (e.target.classList.contains("productSelect")) {
+        let selected = e.target.selectedOptions[0];
+        let price = parseFloat(selected.dataset.price || 0);
+        e.target.closest(".item-row").querySelector(".rate").value = price.toFixed(2);
+        calculateTotals();
+    }
+});
+
+// Remove row
+document.addEventListener("click", function (e) {
+    if (e.target.classList.contains("removeRow")) {
+        let rows = document.querySelectorAll(".item-row");
+        if (rows.length > 1) {
+            e.target.closest(".item-row").remove();
+            calculateTotals();
+        } else {
+            alert("At least one product required");
+        }
+    }
+});
+
+// FINAL SUBMIT LOGIC
+document.getElementById("invoiceForm").addEventListener("submit", function(e) {
+    e.preventDefault();
+
+    // Remove out of stock rows
+    document.querySelectorAll(".item-row").forEach(row => {
+        let stock = parseFloat(row.querySelector(".productSelect").selectedOptions[0]?.dataset.stock || 0);
+        if (stock === 0) {
+            alert("Out of stock product removed");
+            row.remove();
+        }
+    });
+
+    if (document.querySelectorAll(".item-row").length === 0) {
+        alert("No valid products!");
+        return;
+    }
+
+    // Adjust qty > stock
+  let proceed = true;
+
+document.querySelectorAll(".item-row").forEach(row => {
+    let product = row.querySelector(".productSelect");
+    let productName = product.selectedOptions[0]?.text || "Product";
+
+    let qty = parseFloat(row.querySelector(".qty").value) || 0;
+    let stock = parseFloat(product.selectedOptions[0]?.dataset.stock || 0);
+
+    if (qty > stock) {
+        let confirmMsg = `Only ${stock} items available for "${productName}".\n\nDo you want to proceed with ${stock}?`;
+
+        if (confirm(confirmMsg)) {
+            row.querySelector(".qty").value = stock; // adjust
+        } else {
+            proceed = false; // stop invoice
+        }
+    }
+});
+
+if (!proceed) {
+    return;
+}
+
+    submitInvoice();
+});
+
+function submitInvoice() {
+    let btn = document.getElementById("submitBtn");
+    btn.disabled = true;
+    btn.innerText = "Processing...";
+
+    let formData = new FormData(document.getElementById("invoiceForm"));
+
+    fetch("/create-invoice", {method: "POST", body: formData})
+    .then(res => res.json())
+    .then(data => {
+        btn.disabled = false;
+        btn.innerText = "Generate Invoice";
+
+        if (data.status === "error") {
+            document.getElementById("errorText").innerText = data.message;
+            new bootstrap.Modal(document.getElementById("errorModal")).show();
+        } else {
+            window.location.href = data.redirect;
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.innerText = "Generate Invoice";
+        alert("Something went wrong!");
+    });
+}
+
+calculateTotals();
+
+});
+</script>
+
+{% endblock %}
