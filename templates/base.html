@@ -36,14 +36,7 @@
     padding: 20px;
     display: flex;
     flex-direction: column;
-
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    overflow-y: auto;
-}
-
+    }
         .sidebar h5 {
             color: #fff;
             margin-bottom: 25px;
@@ -81,17 +74,19 @@
         .sidebar .logout {
             margin-top: auto;
             text-align: center;
+            position: sticky;
+
         }
 
         /* MAIN */
-       .main {
+      .main {
     flex: 1;
-    margin-left: 240px;
     display: flex;
     flex-direction: column;
 }
 
         .content {
+
             flex: 1;
             padding: 30px 25px;
         }

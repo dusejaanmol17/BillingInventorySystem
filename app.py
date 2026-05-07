@@ -493,7 +493,7 @@ def invoice_page():
     customers = cur.fetchall()
 
     # ✅ Fetch products
-    cur.execute("SELECT product_id, name, price, stock_qty FROM products")
+    cur.execute("SELECT product_id, name, price, stock_qty FROM products ORDER BY LOWER(name)")
     products = cur.fetchall()
 
     cur.close()
