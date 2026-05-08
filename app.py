@@ -340,8 +340,8 @@ def add_customer():
         cur.execute("""
             SELECT customer_id 
             FROM customers 
-            WHERE LOWER(name) = LOWER(%s) OR phone = %s
-        """, (name, phone))
+            WHERE LOWER(name) = LOWER(%s)
+        """, (name, ))
 
         existing = cur.fetchone()
 
