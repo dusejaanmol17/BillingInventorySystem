@@ -1375,6 +1375,7 @@ def generate_monthly_ledger_image(customer_id):
     import matplotlib.pyplot as plt
     from datetime import datetime
     from io import BytesIO
+    from flask import send_file
 
     conn = get_connection()
 
@@ -1385,13 +1386,13 @@ def generate_monthly_ledger_image(customer_id):
         cur.execute("""
             SELECT name
             FROM customers
-            WHERE customer_id=%s
+            WHERE customer_id = %s
         """, (customer_id,))
 
         customer = cur.fetchone()
 
         if not customer:
-            return None
+            return "Customer not found"
 
         customer_name = customer[0]
 
@@ -1402,16 +1403,17 @@ def generate_monthly_ledger_image(customer_id):
         # ================= OPENING BALANCE =================
         cur.execute("""
             SELECT
-                COALESCE(c.opening_balance,0)
-                + COALESCE(inv.total_invoice,0)
-                - COALESCE(pay.total_payment,0)
-                - COALESCE(ret.total_return,0)
+                COALESCE(c.opening_balance, 0)
+                + COALESCE(inv.total_invoice, 0)
+                - COALESCE(pay.total_payment, 0)
+                - COALESCE(ret.total_return, 0)
+
             FROM customers c
 
             LEFT JOIN (
                 SELECT
                     i.customer_id,
-                    SUM(ii.line_total) total_invoice
+                    SUM(ii.line_total) AS total_invoice
                 FROM invoices i
                 JOIN invoice_items ii
                     ON i.invoice_id = ii.invoice_id
@@ -1423,7 +1425,7 @@ def generate_monthly_ledger_image(customer_id):
             LEFT JOIN (
                 SELECT
                     customer_id,
-                    SUM(amount) total_payment
+                    SUM(amount) AS total_payment
                 FROM payments
                 WHERE payment_date < %s
                 GROUP BY customer_id
@@ -1433,7 +1435,7 @@ def generate_monthly_ledger_image(customer_id):
             LEFT JOIN (
                 SELECT
                     customer_id,
-                    SUM(total_return_amount) total_return
+                    SUM(total_return_amount) AS total_return
                 FROM returns
                 WHERE return_date < %s
                 GROUP BY customer_id
@@ -1455,6 +1457,7 @@ def generate_monthly_ledger_image(customer_id):
                 p.name,
                 ii.quantity,
                 ii.line_total
+
             FROM invoices i
 
             JOIN invoice_items ii
@@ -1474,13 +1477,13 @@ def generate_monthly_ledger_image(customer_id):
         for row in invoice_rows:
 
             ledger.append([
-                row[0],          # date
-                "Invoice",       # type
-                row[1],          # invoice number
-                row[2],          # product name
-                row[3],          # qty
-                float(row[4]),   # debit
-                0                # credit
+                row[0],                 # date
+                "Invoice",              # type
+                row[1],                 # invoice number
+                row[2],                 # product name
+                row[3],                 # qty
+                float(row[4]),          # debit
+                0                       # credit
             ])
 
         # ================= PAYMENTS =================
@@ -1488,7 +1491,9 @@ def generate_monthly_ledger_image(customer_id):
             SELECT
                 payment_date,
                 amount
+
             FROM payments
+
             WHERE customer_id = %s
               AND payment_date >= %s
 
@@ -1553,20 +1558,10 @@ def generate_monthly_ledger_image(customer_id):
 
     # ================= NO DATA =================
     if not ledger and opening_balance == 0:
-        return None
+        return "No ledger data found"
 
-    # ================= SAFE SORT =================
-    def safe_date(val):
-
-        if isinstance(val, datetime):
-            return val
-
-        try:
-            return datetime.strptime(str(val), "%Y-%m-%d")
-        except:
-            return datetime.min
-
-    ledger = sorted(ledger, key=lambda x: safe_date(x[0]))
+    # ================= SORT DATA =================
+    ledger = sorted(ledger, key=lambda x: x[0])
 
     # ================= RUNNING BALANCE =================
     running_balance = opening_balance
@@ -1590,7 +1585,7 @@ def generate_monthly_ledger_image(customer_id):
             round(running_balance, 2)
         ])
 
-    # ================= LEDGER ROWS =================
+    # ================= TRANSACTION ROWS =================
     for entry in ledger:
 
         running_balance += entry[5]
@@ -1609,7 +1604,7 @@ def generate_monthly_ledger_image(customer_id):
 
     total_balance = round(running_balance, 2)
 
-    # ================= TABLE DATA =================
+    # ================= TABLE =================
     table_data = [[
         "Date",
         "Type",
@@ -1635,21 +1630,23 @@ def generate_monthly_ledger_image(customer_id):
     ])
 
     # ================= IMAGE =================
-    fig, ax = plt.subplots(figsize=(14, 6))
+    fig_height = max(6, len(table_data) * 0.5)
 
-    ax.axis('off')
+    fig, ax = plt.subplots(figsize=(16, fig_height))
+
+    ax.axis("off")
 
     plt.title(
         f"Monthly Ledger - {customer_name}",
-        fontsize=14,
-        weight='bold',
+        fontsize=16,
+        weight="bold",
         pad=20
     )
 
     table = ax.table(
         cellText=table_data,
-        loc='center',
-        cellLoc='center'
+        loc="center",
+        cellLoc="center"
     )
 
     table.auto_set_font_size(False)
@@ -1658,14 +1655,14 @@ def generate_monthly_ledger_image(customer_id):
 
     # ================= COLUMN WIDTHS =================
     col_widths = [
-        0.10,  # Date
-        0.10,  # Type
-        0.15,  # Ref
-        0.25,  # Product
-        0.08,  # Qty
-        0.12,  # Debit
-        0.12,  # Credit
-        0.12   # Balance
+        0.12,   # Date
+        0.12,   # Type
+        0.16,   # Ref
+        0.30,   # Product
+        0.10,   # Qty
+        0.14,   # Debit
+        0.14,   # Credit
+        0.14    # Balance
     ]
 
     for i, width in enumerate(col_widths):
@@ -1676,22 +1673,26 @@ def generate_monthly_ledger_image(customer_id):
     # ================= HEADER STYLE =================
     for i in range(len(table_data[0])):
 
-        table[(0, i)].set_text_props(weight='bold')
+        table[(0, i)].set_text_props(weight="bold")
 
-    # ================= SAVE TO MEMORY =================
+    # ================= SAVE IMAGE =================
     img = BytesIO()
 
     plt.savefig(
         img,
-        format='png',
-        bbox_inches='tight'
+        format="png",
+        bbox_inches="tight"
     )
 
     plt.close()
 
     img.seek(0)
 
-    return img
+    # ================= RETURN IMAGE =================
+    return send_file(
+        img,
+        mimetype="image/png"
+    )
 
 @app.route("/invoice/<int:invoice_id>/pdf")
 def download_invoice(invoice_id):
