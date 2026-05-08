@@ -1369,7 +1369,7 @@ def download_stock_inward_report():
 
     return send_file(output, as_attachment=True, download_name="stock_inward_report.xlsx")
 
-
+@app.route("/monthly-ledger/<int:customer_id>")
 def generate_monthly_ledger_image(customer_id):
 
     import matplotlib.pyplot as plt
