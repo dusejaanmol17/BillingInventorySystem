@@ -5,7 +5,7 @@ import os
 conn = psycopg2.connect(os.getenv("DATABASE_URL"))
 cur = conn.cursor()
 
-with open('customers.csv', 'r', encoding='utf-8') as file:
+with open('upload_customer.csv', 'r', encoding='utf-8') as file:
 
     reader = csv.DictReader(file)
 

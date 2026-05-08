@@ -1487,10 +1487,22 @@ def generate_monthly_ledger_image(customer_id):
     running_balance = opening_balance
     final_data = []
 
+    # ADD OPENING ONLY IF NON-ZERO
+if opening_balance != 0:
+
     debit = max(opening_balance, 0)
     credit = abs(min(opening_balance, 0))
 
-    final_data.append(["", "Opening", "", "", "", debit, credit, running_balance])
+    final_data.append([
+        "",
+        "Opening",
+        "",
+        "",
+        "",
+        debit,
+        credit,
+        running_balance
+    ])
 
     for entry in ledger:
         running_balance += entry[5]
