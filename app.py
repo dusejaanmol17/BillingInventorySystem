@@ -1372,18 +1372,22 @@ def download_stock_inward_report():
 
 def generate_monthly_ledger_image(customer_id):
 
+    import matplotlib.pyplot as plt
+    from datetime import datetime
+    from io import BytesIO
+
     conn = get_connection()
 
     try:
         cur = conn.cursor()
 
-        # CUSTOMER NAME
+        # ================= CUSTOMER NAME =================
         cur.execute("""
             SELECT name
             FROM customers
             WHERE customer_id=%s
         """, (customer_id,))
-        
+
         customer = cur.fetchone()
 
         if not customer:
@@ -1391,10 +1395,11 @@ def generate_monthly_ledger_image(customer_id):
 
         customer_name = customer[0]
 
+        # ================= DATE RANGE =================
         today = datetime.today()
         start_date = today.replace(day=1)
 
-        # OPENING BALANCE
+        # ================= OPENING BALANCE =================
         cur.execute("""
             SELECT
                 COALESCE(c.opening_balance,0)
@@ -1402,25 +1407,39 @@ def generate_monthly_ledger_image(customer_id):
                 - COALESCE(pay.total_payment,0)
                 - COALESCE(ret.total_return,0)
             FROM customers c
+
             LEFT JOIN (
-                SELECT i.customer_id, SUM(ii.line_total) total_invoice
+                SELECT
+                    i.customer_id,
+                    SUM(ii.line_total) total_invoice
                 FROM invoices i
-                JOIN invoice_items ii ON i.invoice_id = ii.invoice_id
+                JOIN invoice_items ii
+                    ON i.invoice_id = ii.invoice_id
                 WHERE i.invoice_date < %s
                 GROUP BY i.customer_id
-            ) inv ON c.customer_id = inv.customer_id
+            ) inv
+                ON c.customer_id = inv.customer_id
+
             LEFT JOIN (
-                SELECT customer_id, SUM(amount) total_payment
+                SELECT
+                    customer_id,
+                    SUM(amount) total_payment
                 FROM payments
                 WHERE payment_date < %s
                 GROUP BY customer_id
-            ) pay ON c.customer_id = pay.customer_id
+            ) pay
+                ON c.customer_id = pay.customer_id
+
             LEFT JOIN (
-                SELECT customer_id, SUM(total_return_amount) total_return
+                SELECT
+                    customer_id,
+                    SUM(total_return_amount) total_return
                 FROM returns
                 WHERE return_date < %s
                 GROUP BY customer_id
-            ) ret ON c.customer_id = ret.customer_id
+            ) ret
+                ON c.customer_id = ret.customer_id
+
             WHERE c.customer_id = %s
         """, (start_date, start_date, start_date, customer_id))
 
@@ -1428,34 +1447,58 @@ def generate_monthly_ledger_image(customer_id):
 
         ledger = []
 
-        # INVOICES
+        # ================= INVOICES =================
         cur.execute("""
-            SELECT i.invoice_date, i.invoice_number, p.name, ii.quantity, ii.line_total
+            SELECT
+                i.invoice_date,
+                i.invoice_number,
+                p.name,
+                ii.quantity,
+                ii.line_total
             FROM invoices i
-            JOIN invoice_items ii ON i.invoice_id=ii.invoice_id
-            JOIN products p ON ii.product_id=p.product_id
-            WHERE i.customer_id=%s AND i.invoice_date >= %s
+
+            JOIN invoice_items ii
+                ON i.invoice_id = ii.invoice_id
+
+            JOIN products p
+                ON ii.product_id = p.product_id
+
+            WHERE i.customer_id = %s
+              AND i.invoice_date >= %s
+
+            ORDER BY i.invoice_date ASC
         """, (customer_id, start_date))
 
-        for row in cur.fetchall():
+        invoice_rows = cur.fetchall()
+
+        for row in invoice_rows:
+
             ledger.append([
-                row[0],
-                "Invoice",
-                row[1],
-                row[2],
-                row[3],
-                row[4],
-                0
+                row[0],          # date
+                "Invoice",       # type
+                row[1],          # invoice number
+                row[2],          # product name
+                row[3],          # qty
+                float(row[4]),   # debit
+                0                # credit
             ])
 
-        # PAYMENTS
+        # ================= PAYMENTS =================
         cur.execute("""
-            SELECT payment_date, amount 
-            FROM payments 
-            WHERE customer_id=%s AND payment_date >= %s
+            SELECT
+                payment_date,
+                amount
+            FROM payments
+            WHERE customer_id = %s
+              AND payment_date >= %s
+
+            ORDER BY payment_date ASC
         """, (customer_id, start_date))
 
-        for row in cur.fetchall():
+        payment_rows = cur.fetchall()
+
+        for row in payment_rows:
+
             ledger.append([
                 row[0],
                 "Payment",
@@ -1463,19 +1506,36 @@ def generate_monthly_ledger_image(customer_id):
                 "",
                 "",
                 0,
-                row[1]
+                float(row[1])
             ])
 
-        # RETURNS
+        # ================= RETURNS =================
         cur.execute("""
-            SELECT r.return_date, r.return_number, p.name, ri.quantity, ri.line_total
+            SELECT
+                r.return_date,
+                r.return_number,
+                p.name,
+                ri.quantity,
+                ri.line_total
+
             FROM returns r
-            JOIN return_items ri ON r.return_id=ri.return_id
-            JOIN products p ON ri.product_id=p.product_id
-            WHERE r.customer_id=%s AND r.return_date >= %s
+
+            JOIN return_items ri
+                ON r.return_id = ri.return_id
+
+            JOIN products p
+                ON ri.product_id = p.product_id
+
+            WHERE r.customer_id = %s
+              AND r.return_date >= %s
+
+            ORDER BY r.return_date ASC
         """, (customer_id, start_date))
 
-        for row in cur.fetchall():
+        return_rows = cur.fetchall()
+
+        for row in return_rows:
+
             ledger.append([
                 row[0],
                 "Return",
@@ -1483,7 +1543,7 @@ def generate_monthly_ledger_image(customer_id):
                 row[2],
                 row[3],
                 0,
-                row[4]
+                float(row[4])
             ])
 
         cur.close()
@@ -1491,11 +1551,13 @@ def generate_monthly_ledger_image(customer_id):
     finally:
         conn.close()
 
+    # ================= NO DATA =================
     if not ledger and opening_balance == 0:
         return None
 
-    # SORTING
+    # ================= SAFE SORT =================
     def safe_date(val):
+
         if isinstance(val, datetime):
             return val
 
@@ -1506,11 +1568,12 @@ def generate_monthly_ledger_image(customer_id):
 
     ledger = sorted(ledger, key=lambda x: safe_date(x[0]))
 
-    # RUNNING BALANCE
+    # ================= RUNNING BALANCE =================
     running_balance = opening_balance
+
     final_data = []
 
-    # ADD OPENING ONLY IF NON-ZERO
+    # ================= OPENING ROW =================
     if opening_balance != 0:
 
         debit = max(opening_balance, 0)
@@ -1522,12 +1585,12 @@ def generate_monthly_ledger_image(customer_id):
             "",
             "",
             "",
-            debit,
-            credit,
-            running_balance
+            round(debit, 2),
+            round(credit, 2),
+            round(running_balance, 2)
         ])
 
-    # LEDGER ENTRIES
+    # ================= LEDGER ROWS =================
     for entry in ledger:
 
         running_balance += entry[5]
@@ -1539,19 +1602,41 @@ def generate_monthly_ledger_image(customer_id):
             entry[2],
             entry[3],
             entry[4],
-            entry[5],
-            entry[6],
-            running_balance
+            round(entry[5], 2),
+            round(entry[6], 2),
+            round(running_balance, 2)
         ])
 
-    total_balance = running_balance
+    total_balance = round(running_balance, 2)
 
-    table_data = [["Date","Type","Ref","Product","Qty","Debit","Credit","Balance"]]
+    # ================= TABLE DATA =================
+    table_data = [[
+        "Date",
+        "Type",
+        "Ref",
+        "Product",
+        "Qty",
+        "Debit",
+        "Credit",
+        "Balance"
+    ]]
+
     table_data.extend(final_data)
-    table_data.append(["","","","","","", "Total", f"{total_balance:.2f}"])
 
-    # ===== CREATE IMAGE IN MEMORY =====
+    table_data.append([
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "Total",
+        total_balance
+    ])
+
+    # ================= IMAGE =================
     fig, ax = plt.subplots(figsize=(14, 6))
+
     ax.axis('off')
 
     plt.title(
@@ -1571,16 +1656,29 @@ def generate_monthly_ledger_image(customer_id):
     table.set_fontsize(9)
     table.scale(1, 1.6)
 
-    col_widths = [0.10, 0.10, 0.15, 0.25, 0.08, 0.12, 0.12, 0.12]
+    # ================= COLUMN WIDTHS =================
+    col_widths = [
+        0.10,  # Date
+        0.10,  # Type
+        0.15,  # Ref
+        0.25,  # Product
+        0.08,  # Qty
+        0.12,  # Debit
+        0.12,  # Credit
+        0.12   # Balance
+    ]
 
     for i, width in enumerate(col_widths):
+
         for row in range(len(table_data)):
             table[(row, i)].set_width(width)
 
+    # ================= HEADER STYLE =================
     for i in range(len(table_data[0])):
+
         table[(0, i)].set_text_props(weight='bold')
 
-    # MEMORY BUFFER
+    # ================= SAVE TO MEMORY =================
     img = BytesIO()
 
     plt.savefig(
@@ -1594,23 +1692,6 @@ def generate_monthly_ledger_image(customer_id):
     img.seek(0)
 
     return img
-
-@app.route("/monthly-ledger/<int:customer_id>")
-def monthly_ledger(customer_id):
-    if "user" not in session:
-        return redirect("/login")
-
-    img = generate_monthly_ledger_image(customer_id)
-
-    if not img:
-        return "No data for this month"
-
-    return send_file(
-        img,
-        mimetype='image/png',
-        as_attachment=True,
-        download_name=f"monthly_ledger_{customer_id}.png"
-    )
 
 @app.route("/invoice/<int:invoice_id>/pdf")
 def download_invoice(invoice_id):
