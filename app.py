@@ -9,6 +9,7 @@ import uuid
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 import io
+from io import BytesIO
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
@@ -1368,12 +1369,8 @@ def download_stock_inward_report():
 
     return send_file(output, as_attachment=True, download_name="stock_inward_report.xlsx")
 
-from io import BytesIO
 
 def generate_monthly_ledger_image(customer_id):
-
-    import matplotlib.pyplot as plt
-    from datetime import datetime
 
     conn = get_connection()
 
@@ -1388,6 +1385,7 @@ def generate_monthly_ledger_image(customer_id):
         """, (customer_id,))
         
         customer = cur.fetchone()
+
         if not customer:
             return None
 
@@ -1440,7 +1438,15 @@ def generate_monthly_ledger_image(customer_id):
         """, (customer_id, start_date))
 
         for row in cur.fetchall():
-            ledger.append([row[0], "Invoice", row[1], row[2], row[3], row[4], 0])
+            ledger.append([
+                row[0],
+                "Invoice",
+                row[1],
+                row[2],
+                row[3],
+                row[4],
+                0
+            ])
 
         # PAYMENTS
         cur.execute("""
@@ -1450,7 +1456,15 @@ def generate_monthly_ledger_image(customer_id):
         """, (customer_id, start_date))
 
         for row in cur.fetchall():
-            ledger.append([row[0], "Payment", "Payment", "", "", 0, row[1]])
+            ledger.append([
+                row[0],
+                "Payment",
+                "Payment",
+                "",
+                "",
+                0,
+                row[1]
+            ])
 
         # RETURNS
         cur.execute("""
@@ -1462,7 +1476,15 @@ def generate_monthly_ledger_image(customer_id):
         """, (customer_id, start_date))
 
         for row in cur.fetchall():
-            ledger.append([row[0], "Return", row[1], row[2], row[3], 0, row[4]])
+            ledger.append([
+                row[0],
+                "Return",
+                row[1],
+                row[2],
+                row[3],
+                0,
+                row[4]
+            ])
 
         cur.close()
 
@@ -1476,6 +1498,7 @@ def generate_monthly_ledger_image(customer_id):
     def safe_date(val):
         if isinstance(val, datetime):
             return val
+
         try:
             return datetime.strptime(str(val), "%Y-%m-%d")
         except:
@@ -1488,23 +1511,25 @@ def generate_monthly_ledger_image(customer_id):
     final_data = []
 
     # ADD OPENING ONLY IF NON-ZERO
-if opening_balance != 0:
+    if opening_balance != 0:
 
-    debit = max(opening_balance, 0)
-    credit = abs(min(opening_balance, 0))
+        debit = max(opening_balance, 0)
+        credit = abs(min(opening_balance, 0))
 
-    final_data.append([
-        "",
-        "Opening",
-        "",
-        "",
-        "",
-        debit,
-        credit,
-        running_balance
-    ])
+        final_data.append([
+            "",
+            "Opening",
+            "",
+            "",
+            "",
+            debit,
+            credit,
+            running_balance
+        ])
 
+    # LEDGER ENTRIES
     for entry in ledger:
+
         running_balance += entry[5]
         running_balance -= entry[6]
 
@@ -1523,15 +1548,24 @@ if opening_balance != 0:
 
     table_data = [["Date","Type","Ref","Product","Qty","Debit","Credit","Balance"]]
     table_data.extend(final_data)
-    table_data.append(["","","","","","", "Total", f"{total_balance}"])
+    table_data.append(["","","","","","", "Total", f"{total_balance:.2f}"])
 
     # ===== CREATE IMAGE IN MEMORY =====
     fig, ax = plt.subplots(figsize=(14, 6))
     ax.axis('off')
 
-    plt.title(f"Monthly Ledger - {customer_name}", fontsize=14, weight='bold', pad=20)
+    plt.title(
+        f"Monthly Ledger - {customer_name}",
+        fontsize=14,
+        weight='bold',
+        pad=20
+    )
 
-    table = ax.table(cellText=table_data, loc='center', cellLoc='center')
+    table = ax.table(
+        cellText=table_data,
+        loc='center',
+        cellLoc='center'
+    )
 
     table.auto_set_font_size(False)
     table.set_fontsize(9)
@@ -1546,10 +1580,17 @@ if opening_balance != 0:
     for i in range(len(table_data[0])):
         table[(0, i)].set_text_props(weight='bold')
 
-    # ✅ MEMORY BUFFER INSTEAD OF FILE
+    # MEMORY BUFFER
     img = BytesIO()
-    plt.savefig(img, format='png', bbox_inches='tight')
+
+    plt.savefig(
+        img,
+        format='png',
+        bbox_inches='tight'
+    )
+
     plt.close()
+
     img.seek(0)
 
     return img
