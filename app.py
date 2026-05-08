@@ -1452,7 +1452,7 @@ def generate_monthly_ledger_image(customer_id):
         # ================= INVOICES =================
         cur.execute("""
             SELECT
-                i.invoice_date,
+                DATE(i.invoice_date),
                 i.invoice_number,
                 p.name,
                 ii.quantity,
@@ -1467,38 +1467,38 @@ def generate_monthly_ledger_image(customer_id):
                 ON ii.product_id = p.product_id
 
             WHERE i.customer_id = %s
-              AND i.invoice_date >= %s
+              AND DATE(i.invoice_date) >= %s
 
-            ORDER BY i.invoice_date ASC
-        """, (customer_id, start_date))
+            ORDER BY DATE(i.invoice_date) ASC
+        """, (customer_id, start_date.date()))
 
         invoice_rows = cur.fetchall()
 
         for row in invoice_rows:
 
             ledger.append([
-                row[0],                 # date
-                "Invoice",              # type
-                row[1],                 # invoice number
-                row[2],                 # product name
-                row[3],                 # qty
-                float(row[4]),          # debit
-                0                       # credit
+                row[0],                 # invoice date
+                "Invoice",
+                row[1],
+                row[2],
+                row[3],
+                float(row[4]),
+                0
             ])
 
         # ================= PAYMENTS =================
         cur.execute("""
             SELECT
-                payment_date,
+                DATE(payment_date),
                 amount
 
             FROM payments
 
             WHERE customer_id = %s
-              AND payment_date >= %s
+              AND DATE(payment_date) >= %s
 
-            ORDER BY payment_date ASC
-        """, (customer_id, start_date))
+            ORDER BY DATE(payment_date) ASC
+        """, (customer_id, start_date.date()))
 
         payment_rows = cur.fetchall()
 
@@ -1517,7 +1517,7 @@ def generate_monthly_ledger_image(customer_id):
         # ================= RETURNS =================
         cur.execute("""
             SELECT
-                r.return_date,
+                DATE(r.return_date),
                 r.return_number,
                 p.name,
                 ri.quantity,
@@ -1532,10 +1532,10 @@ def generate_monthly_ledger_image(customer_id):
                 ON ri.product_id = p.product_id
 
             WHERE r.customer_id = %s
-              AND r.return_date >= %s
+              AND DATE(r.return_date) >= %s
 
-            ORDER BY r.return_date ASC
-        """, (customer_id, start_date))
+            ORDER BY DATE(r.return_date) ASC
+        """, (customer_id, start_date.date()))
 
         return_rows = cur.fetchall()
 
@@ -1655,14 +1655,14 @@ def generate_monthly_ledger_image(customer_id):
 
     # ================= COLUMN WIDTHS =================
     col_widths = [
-        0.12,   # Date
-        0.12,   # Type
-        0.16,   # Ref
-        0.30,   # Product
-        0.10,   # Qty
-        0.14,   # Debit
-        0.14,   # Credit
-        0.14    # Balance
+        0.12,
+        0.12,
+        0.16,
+        0.30,
+        0.10,
+        0.14,
+        0.14,
+        0.14
     ]
 
     for i, width in enumerate(col_widths):
@@ -1693,7 +1693,7 @@ def generate_monthly_ledger_image(customer_id):
         img,
         mimetype="image/png"
     )
-
+    
 @app.route("/invoice/<int:invoice_id>/pdf")
 def download_invoice(invoice_id):
 
